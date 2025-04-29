@@ -1,0 +1,19 @@
+theory THEORY_GOR \
+  ::cvc5::internal::theory::gor::TheoryGenericOrderRelation \
+  "theory/gor/theory_gor.h"
+
+rewriter \
+  ::cvc5::internal::theory::gor::TheoryGenericOrderRelationRewriter \
+  "theory/gor/theory_gor_rewriter.h"
+
+typechecker "theory/gor/theory_gor_type_rules.h"
+
+# Operator kind: GENERIC_SMALLER_THAN (Smaller-than supporting all types)
+operator GENERIC_SMALLER_THAN 2: \
+  "Smaller-than that supports all types (as long as both arguments are the same type)"
+
+typerule GENERIC_SMALLER_THAN \
+  ::cvc5::internal::theory::gor::GenericSmallerThanTypeRule
+
+endtheory
+
