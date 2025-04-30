@@ -9,14 +9,16 @@ TheoryGenericOrderRelationRewriter::TheoryGenericOrderRelationRewriter(NodeManag
 {
 }
 
-RewriteResponse TheoryGenericOrderRelationRewriter::postRewrite(TNode node)
+RewriteResponse TheoryGenericOrderRelationRewriter::postRewrite(TNode t)
 {
-  return RewriteResponse(REWRITE_DONE, original_term);
+  Trace("ff::rw::post") << "ff::postRewrite: " << t << std::endl;
+  return RewriteResponse(REWRITE_DONE, t);
 }
 
-RewriteResponse TheoryGenericOrderRelationRewriter::preRewrite(TNode node)
+RewriteResponse TheoryGenericOrderRelationRewriter::preRewrite(TNode t)
 {
-  return RewriteResponse(REWRITE_DONE, original_term);
+  Trace("ff::rw::pre") << "ff::preRewrite: " << t << std::endl;
+  return RewriteResponse(REWRITE_DONE, t);
 }
 
 }  // namespace gor
