@@ -50,17 +50,17 @@ class TheoryGenericOrderRelation : public Theory
                           const std::set<Node>& termSet) override;
   void computeCareGraph() override;
   TrustNode explain(TNode) override;
-  Node getModelValue(TNode) override;
+  // Node getModelValue(TNode) override;
   std::string identify() const override { return "THEORY_GOR"; }
   void preRegisterTerm(TNode node) override;
   TrustNode ppRewrite(TNode n, std::vector<SkolemLemma>& lems) override;
-  PPAssertStatus ppAssert(TrustNode tin,
-                          TrustSubstitutionMap& outSubstitutions) override;
+  // PPAssertStatus ppAssert(TrustNode tin,
+  //                         TrustSubstitutionMap& outSubstitutions) override;
   void presolve() override;
   bool isEntailed(Node n, bool pol);
 
  private:
-  TheoryGenericOrderRelationRewriter d_rewriter{};
+  TheoryGenericOrderRelationRewriter d_rewriter;
 
   /** The state of the gor solver at full effort */
   TheoryState d_state;

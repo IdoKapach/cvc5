@@ -1,20 +1,25 @@
 #include "theory/gor/theory_gor.h"
 #include "theory_gor.h"
 
+#include "expr/node_traversal.h"
+#include "theory/theory_model.h"
+#include "theory/trust_substitutions.h"
+#include "util/result.h"
+#include "util/statistics_registry.h"
+#include "util/utility.h"
+
 namespace cvc5::internal {
 namespace theory {
 namespace gor {
 
 TheoryGenericOrderRelation::TheoryGenericOrderRelation(Env& env,
-        OutputChannel& out,
-        Valuation valuation)
+    OutputChannel& out,
+    Valuation valuation)
 : Theory(THEORY_GOR, env, out, valuation),
 d_rewriter(nodeManager()),
 d_state(env, valuation),
 d_im(env, *this, d_state, getStatsPrefix(THEORY_GOR)),
-d_eqNotify(d_im),
-d_stats(
-std::make_unique<GorStatistics>(statisticsRegistry(), "theory::gor::"))
+d_eqNotify(d_im)
 {
 d_theoryState = &d_state;
 d_inferManager = &d_im;
@@ -24,10 +29,6 @@ TheoryGenericOrderRelation::~TheoryGenericOrderRelation() {}
 
 TheoryRewriter* TheoryGenericOrderRelation::getTheoryRewriter()
 {
-  if (!options().gor.gor)
-  {
-    return nullptr;
-  }
   return &d_rewriter;
 }
 
@@ -70,9 +71,9 @@ TrustNode TheoryGenericOrderRelation::explain(TNode) {
     return TrustNode();
 }
 
-Node TheoryGenericOrderRelation::getModelValue(TNode) { 
-    return Node();
-}
+// Node TheoryGenericOrderRelation::getModelValue(TNode) { 
+//     return Node();
+// }
 
 void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {}
 
@@ -82,11 +83,11 @@ TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
   return TrustNode();
 }
 
-PPAssertStatus TheoryGenericOrderRelation::ppAssert(
-    TrustNode tin, TrustSubstitutionMap& outSubstitutions)
-{
-  return PPAssertStatus();
-}
+// PPAssertStatus TheoryGenericOrderRelation::ppAssert(
+//     TrustNode tin, TrustSubstitutionMap& outSubstitutions)
+// {
+//   return PPAssertStatus();
+// }
 
 void TheoryGenericOrderRelation::presolve() {}
 
