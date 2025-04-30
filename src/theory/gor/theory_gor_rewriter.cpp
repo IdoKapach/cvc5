@@ -11,13 +11,13 @@ TheoryGenericOrderRelationRewriter::TheoryGenericOrderRelationRewriter(NodeManag
 
 RewriteResponse TheoryGenericOrderRelationRewriter::postRewrite(TNode t)
 {
-  Trace("ff::rw::post") << "ff::postRewrite: " << t << std::endl;
+  Trace("gor::rw::post") << "gor::postRewrite: " << t << std::endl;
   return RewriteResponse(REWRITE_DONE, t);
 }
 
 RewriteResponse TheoryGenericOrderRelationRewriter::preRewrite(TNode t)
 {
-  Trace("ff::rw::pre") << "ff::preRewrite: " << t << std::endl;
+  Trace("gor::rw::pre") << "gor::preRewrite: " << t << std::endl;
   return RewriteResponse(REWRITE_DONE, t);
 }
 

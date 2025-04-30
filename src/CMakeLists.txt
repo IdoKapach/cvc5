@@ -774,6 +774,8 @@ libcvc5_add_sources(
   theory/gor/theory_gor_rewriter.h
   theory/gor/theory_gor_type_rules.h
   theory/gor/theory_gor_type_rules.cpp
+  theory/gor/stats.cpp
+  theory/gor/stats.h
   theory/interrupted.h
   theory/incomplete_id.cpp
   theory/incomplete_id.h
