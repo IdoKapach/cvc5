@@ -256,6 +256,8 @@ const static std::unordered_map<Kind, std::pair<internal::Kind, std::string>>
         KIND_ENUM(Kind::FINITE_FIELD_MULT, internal::Kind::FINITE_FIELD_MULT),
         KIND_ENUM(Kind::FINITE_FIELD_ADD, internal::Kind::FINITE_FIELD_ADD),
         KIND_ENUM(Kind::FINITE_FIELD_NEG, internal::Kind::FINITE_FIELD_NEG),
+        /* GOR --------------------------------------------------------------- */
+        KIND_ENUM(Kind::GENERIC_SMALLER_THAN, internal::Kind::GENERIC_SMALLER_THAN),
         /* FP --------------------------------------------------------------- */
         KIND_ENUM(Kind::CONST_FLOATINGPOINT,
                   internal::Kind::CONST_FLOATINGPOINT),

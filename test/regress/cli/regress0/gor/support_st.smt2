@@ -1,0 +1,8 @@
+(set-logic ALL)
+(declare-sort S 0)
+(declare-const x S)
+(declare-const y S)
+(assert (gor.< x y))
+(assert (gor.< y x))
+(assert (gor.< y y))
+(check-sat)
