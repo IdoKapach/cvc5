@@ -17,20 +17,33 @@ TypeNode GenericSmallerThanTypeRule::computeType(NodeManager* nodeManager,
 {
   Assert(n.getNumChildren() == 2);
 
-  TypeNode t1 = n[0].getType(check);
-  TypeNode t2 = n[1].getType(check);
+  TNode arg1 = n[0];
+  TNode arg2 = n[1];
 
-  if (check && t1 != t2)
+  if (check)
   {
-    if (errOut)
+    if (arg1.getKind() != Kind::VARIABLE || arg2.getKind() != Kind::VARIABLE)
     {
-      *errOut << "GENERIC_SMALLER_THAN requires both arguments to have the same type. Got: "
-              << t1 << " and " << t2;
+      if (errOut)
+      {
+        *errOut << "Arguments to gor.< must be variables (got: "
+                << arg1 << ", " << arg2 << ")";
+      }
+      throw TypeCheckingExceptionPrivate(n, "Arguments to gor.< must be variables.");
     }
-    throw TypeCheckingExceptionPrivate(n, "Mismatched types in GENERIC_SMALLER_THAN");
+
+    TypeNode t1 = arg1.getType();
+    TypeNode t2 = arg2.getType();
+    if (t1 != t2)
+    {
+      if (errOut)
+      {
+        *errOut << "Arguments to gor.< must have same type.";
+      }
+      throw TypeCheckingExceptionPrivate(n, "Mismatched types in gor.<");
+    }
   }
 
-  // Result is always Boolean
   return nodeManager->booleanType();
 }
 
