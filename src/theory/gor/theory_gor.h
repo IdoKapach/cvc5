@@ -4,6 +4,7 @@
 #define CVC5__THEORY__GOR__THEORY_GOR_H
 
 #include <memory>
+#include <map>
 
 #include "smt/logic_exception.h"
 #include "theory/care_pair_argument_callback.h"
@@ -59,7 +60,13 @@ class TheoryGenericOrderRelation : public Theory
   void presolve() override;
   bool isEntailed(Node n, bool pol);
 
+
+  bool needsCheckLastEffort() override;
+
  private:
+ std::vector<Node> d_relations;
+
+
   TheoryGenericOrderRelationRewriter d_rewriter;
 
   /** The state of the gor solver at full effort */
@@ -70,6 +77,17 @@ class TheoryGenericOrderRelation : public Theory
 
   /** Manages notifications from our equality engine */
   TheoryEqNotifyClass d_eqNotify;
+
+  /** Map from variables to the first element of their list */
+  std::map<TNode, size_t> d_varMap;
+
+  /** i,jth entry stores edges from i to j. */
+  std::vector<std::vector<bool>> d_matrix;
+
+  /** Number of variables in the graph */
+  size_t d_numVars;
+
+  bool isHasCircle();
 }; /* class TheoryGenericOrderRelation */
 
 }  // namespace gor
