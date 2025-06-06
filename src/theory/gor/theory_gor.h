@@ -87,7 +87,7 @@ class TheoryGenericOrderRelation : public Theory
   /** Number of variables in the graph */
   size_t d_numVars;
 
-  bool isHasCircle();
+  bool isHasCycle();
 }; /* class TheoryGenericOrderRelation */
 
 }  // namespace gor

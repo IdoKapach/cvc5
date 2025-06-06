@@ -26,9 +26,7 @@ d_numVars(0)
   d_inferManager = &d_im;
 }
 
-TheoryGenericOrderRelation::~TheoryGenericOrderRelation() {
-  // std::cout << "destroyyyyy\n";
-}
+TheoryGenericOrderRelation::~TheoryGenericOrderRelation() {}
 
 TheoryRewriter* TheoryGenericOrderRelation::getTheoryRewriter()
 {
@@ -44,7 +42,6 @@ ProofRuleChecker* TheoryGenericOrderRelation::getProofChecker()
 
 bool TheoryGenericOrderRelation::needsEqualityEngine(EeSetupInfo& esi)
 {
-  // std::cout << "equalityyyy\n";
   esi.d_notify = &d_eqNotify;
   esi.d_name = "theory::gor::ee";
   return true;
@@ -52,7 +49,6 @@ bool TheoryGenericOrderRelation::needsEqualityEngine(EeSetupInfo& esi)
 
 void TheoryGenericOrderRelation::finishInit()
 {
-  // std::cout << "finishInit\n";
   Assert(d_equalityEngine != nullptr);
 
   d_equalityEngine->addFunctionKind(Kind::GENERIC_SMALLER_THAN);
@@ -72,14 +68,41 @@ void TheoryGenericOrderRelation::postCheck(Effort level) {
     std::cout << "\n";
   }
 
-  if (isHasCircle()) {
+  if (isHasCycle()) {
     const Node conflict = nodeManager()->mkConst(true);
     d_im.conflict(conflict, InferenceId::FF_LEMMA);
   }
 }
 
-bool TheoryGenericOrderRelation::isHasCircle() {
-  return true;
+bool TheoryGenericOrderRelation::isHasCycle() {
+  // Initiate reachable mat such (after finishing build it) reachable[i][j] == true iff there's a path from i to j.
+  // In order to build it, the method uses Floyd-Warshall algorithm.
+  std::vector<std::vector<bool>> reachable = d_matrix;  
+
+  // Floyd-Warshall: closure over paths
+  for (size_t k = 0; k < d_numVars; ++k)
+  {
+    for (size_t i = 0; i < d_numVars; ++i)
+    {
+      for (size_t j = 0; j < d_numVars; ++j)
+      {
+        if (!reachable[i][j])
+        {
+          reachable[i][j] = reachable[i][k] && reachable[k][j];
+        }
+      }
+    }
+  }
+
+  // Check if there's a cycle in the graph by checking if there's an node that has a path to itself
+  for (size_t i = 0; i < d_numVars; ++i) {
+    if (reachable[i][i]) {
+      return true;
+    }
+  }
+
+  // Return false in case there's no node with path to itself.
+  return false; 
 }
 
 void TheoryGenericOrderRelation::notifyFact(TNode atom,
@@ -87,22 +110,18 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
                                             TNode fact,
                                             bool isInternal)
 {
-  // std::cout << "notifyyyy\n";
   if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && !d_matrix.empty()) {
-    // std::cout << "notifyyyy  smaller than\n";
     TNode var0 = atom[0];
     TNode var1 = atom[1];
     size_t src = d_varMap[var0];
     size_t dst = d_varMap[var1];
     d_matrix[src][dst] = true;
   }
-  // std::cout << "notifyyyy  finish\n";
 }
 
 bool TheoryGenericOrderRelation::collectModelValues(
     TheoryModel* m, const std::set<Node>& termSet)
 {
-  // std::cout << "collectModelValues\n";
   return true;
 }
 
@@ -122,20 +141,15 @@ TrustNode TheoryGenericOrderRelation::explain(TNode) {
 void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
   if (node.isVar()) {
     if (d_varMap.find(node) == d_varMap.end()) {
-      // std::cout << node << " was added\n";
       d_varMap[node] = d_numVars;
-      // std::cout << d_varMap[node] << " new inx\n";
       d_numVars++;
     }
-    // d_im.assertInternalFact(node, true, InferenceId::UNKNOWN, node);
   }
-  // std::cout << node << "\n";
 }
 
 TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
                                                 std::vector<SkolemLemma>& lems)
 {
-  // std::cout << "ppRewrite\n";
   return TrustNode();
 }
 
@@ -161,8 +175,6 @@ bool TheoryGenericOrderRelation::isEntailed(Node n, bool pol) {
 
 
 bool TheoryGenericOrderRelation::needsCheckLastEffort() {
-    // std::cout << "=== needsCheckLastEffort called" << std::endl;
-
   // Initialize the adjacency matrix.
   for (size_t i = 0; i < d_numVars; ++i)
   {
