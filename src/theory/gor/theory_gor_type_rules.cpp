@@ -15,7 +15,7 @@ TypeNode GenericSmallerThanTypeRule::computeType(NodeManager* nodeManager,
                                                  bool check,
                                                  std::ostream* errOut)
 {
-  std::cout << "typeRule: " << n << "\n";
+  // std::cout << "typeRule: " << n << "\n";
   Assert(n.getNumChildren() == 2);
 
   TNode arg1 = n[0];
@@ -30,9 +30,9 @@ TypeNode GenericSmallerThanTypeRule::computeType(NodeManager* nodeManager,
         *errOut << "Arguments to gor.< must be variables (got: "
                 << arg1 << ", " << arg2 << ")";
       }
-      std::cout << "arg1 = " << arg1 << " has type " << arg1.getType() << ", kind " << arg1.getKind() << std::endl;
-      std::cout << "arg2 = " << arg2 << " has type " << arg2.getType() << ", kind " << arg2.getKind() << std::endl;
-      throw TypeCheckingExceptionPrivate(n, "Arguments to gor.< must be variables.");
+      // std::cout << "arg1 = " << arg1 << " has type " << arg1.getType() << ", kind " << arg1.getKind() << std::endl;
+      // std::cout << "arg2 = " << arg2 << " has type " << arg2.getType() << ", kind " << arg2.getKind() << std::endl;
+      throw TypeCheckingExceptionPrivate(n, "Arguments to gor.< must be variables or constants.");
     }
 
     TypeNode t1 = arg1.getType();

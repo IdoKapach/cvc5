@@ -9,7 +9,7 @@ rewriter \
 typechecker "theory/gor/theory_gor_type_rules.h"
 
 # Operator kind: GENERIC_SMALLER_THAN (Smaller-than supporting all types)
-operator GENERIC_SMALLER_THAN 2: \
+operator GENERIC_SMALLER_THAN 2 \
   "Smaller-than that supports all types (as long as both arguments are the same type)"
 
 typerule GENERIC_SMALLER_THAN \

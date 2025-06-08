@@ -143,18 +143,27 @@ TrustNode TheoryGenericOrderRelation::explain(TNode) {
 // }
 
 void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
-  // std::cout << "preRegister: " << node << "\n";
+  // std::cout << "preRegister: " << node << " : " << node.getKind() << "\n";
   if (node.isVar()) {
     if (d_varMap.find(node) == d_varMap.end()) {
       d_varMap[node] = d_numVars;
       d_numVars++;
     }
+    // return;
   }
+
+  // if (node.getKind() != Kind::GENERIC_SMALLER_THAN)
+  // {
+  //   std::stringstream ss;
+  //   ss << "Unsupported assertion in QF_GOR logic: " << node;
+  //   throw LogicException(ss.str());
+  // }
 }
 
 TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
                                                 std::vector<SkolemLemma>& lems)
 {
+  // std::cout << "[GOR][ppRewrite] " << n << std::endl;
   return TrustNode();
 }
 
