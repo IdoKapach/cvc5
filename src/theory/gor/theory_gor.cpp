@@ -22,6 +22,7 @@ d_im(env, *this, d_state, getStatsPrefix(THEORY_GOR)),
 d_eqNotify(d_im),
 d_numVars(0)
 {
+  // std::cout << "constructor\n";
   d_theoryState = &d_state;
   d_inferManager = &d_im;
 }
@@ -42,6 +43,7 @@ ProofRuleChecker* TheoryGenericOrderRelation::getProofChecker()
 
 bool TheoryGenericOrderRelation::needsEqualityEngine(EeSetupInfo& esi)
 {
+  // std::cout << "needEquality\n";
   esi.d_notify = &d_eqNotify;
   esi.d_name = "theory::gor::ee";
   return true;
@@ -49,6 +51,7 @@ bool TheoryGenericOrderRelation::needsEqualityEngine(EeSetupInfo& esi)
 
 void TheoryGenericOrderRelation::finishInit()
 {
+  // std::cout << "finishInit\n";
   Assert(d_equalityEngine != nullptr);
 
   d_equalityEngine->addFunctionKind(Kind::GENERIC_SMALLER_THAN);
@@ -110,6 +113,7 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
                                             TNode fact,
                                             bool isInternal)
 {
+  // std::cout << "notifyFact: " << atom << "\n";
   if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && !d_matrix.empty()) {
     TNode var0 = atom[0];
     TNode var1 = atom[1];
@@ -139,6 +143,7 @@ TrustNode TheoryGenericOrderRelation::explain(TNode) {
 // }
 
 void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
+  // std::cout << "preRegister: " << node << "\n";
   if (node.isVar()) {
     if (d_varMap.find(node) == d_varMap.end()) {
       d_varMap[node] = d_numVars;
@@ -175,6 +180,10 @@ bool TheoryGenericOrderRelation::isEntailed(Node n, bool pol) {
 
 
 bool TheoryGenericOrderRelation::needsCheckLastEffort() {
+  std::cout << "lastEffort\n";
+  if (d_matrix.size() == d_numVars) {
+    return false;
+  }
   // Initialize the adjacency matrix.
   for (size_t i = 0; i < d_numVars; ++i)
   {
