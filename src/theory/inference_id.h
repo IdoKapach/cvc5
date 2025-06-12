@@ -189,6 +189,11 @@ enum class InferenceId
   FF_LEMMA,
   // ---------------------------------- end finite field theory
 
+  // ---------------------------------- generic order realations theory
+  // a catch-all
+  GOR_LEMMA,
+  // ---------------------------------- end generic order realations theory
+
   // ---------------------------------- arrays theory
   ARRAYS_EXT,
   ARRAYS_READ_OVER_WRITE,

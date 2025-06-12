@@ -73,7 +73,7 @@ void TheoryGenericOrderRelation::postCheck(Effort level) {
 
   if (isHasCycle()) {
     const Node conflict = nodeManager()->mkConst(true);
-    d_im.conflict(conflict, InferenceId::FF_LEMMA);
+    d_im.conflict(conflict, InferenceId::GOR_LEMMA);
   }
 }
 
@@ -117,9 +117,7 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
   if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && !d_matrix.empty()) {
     TNode var0 = atom[0];
     TNode var1 = atom[1];
-    size_t src = d_varMap[var0];
-    size_t dst = d_varMap[var1];
-    d_matrix[src][dst] = true;
+    d_matrix[d_varMap[var0]][d_varMap[var1]] = true;
   }
 }
 
@@ -163,7 +161,7 @@ void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
 TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
                                                 std::vector<SkolemLemma>& lems)
 {
-  // std::cout << "[GOR][ppRewrite] " << n << std::endl;
+  // std::cout << "ppRewrite " << n << std::endl;
   return TrustNode();
 }
 
@@ -174,7 +172,7 @@ TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
 // }
 
 void TheoryGenericOrderRelation::presolve() {
-  std::cout << "preeeeeeeeeeeeeeeeee\n";
+  std::cout << "preSolve\n";
   // Initialize adjacency matrix.
   for (size_t i = 0; i < d_numVars; ++i)
   {

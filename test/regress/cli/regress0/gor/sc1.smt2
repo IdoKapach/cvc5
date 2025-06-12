@@ -11,8 +11,8 @@
 (assert (gor.< y z))
 (assert (gor.< w t))
 (assert (gor.< t w))
-;Don't triggers bag:
+;doesn't trigger bug:
 (assert (= (+ p q) p))
-;triggers a bag (because it contains a var than is also inside gor.<)
+;triggers a bug (because it contains a var that is also inside gor.<)
 ;(assert (= (+ x q) p))
 (check-sat)
