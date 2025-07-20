@@ -511,6 +511,7 @@ void LogicInfo::setLogicString(std::string logicString)
           checkDuplicateTheory(THEORY_GOR, "GOR");
           enableTheory(THEORY_GOR);
           enableTheory(THEORY_UF);
+          enableTheory(THEORY_ARRAYS);
           
           enableIntegers();
           enableReals();

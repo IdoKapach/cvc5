@@ -141,9 +141,10 @@ TrustNode TheoryGenericOrderRelation::explain(TNode) {
 // }
 
 void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
-  // std::cout << "preRegister: " << node << " : " << node.getKind() << "\n";
-  if (node.isVar()) {
+  std::cout << "preRegister: " << node << " : " << node.getKind() << "\n";
+  if (node.isVar() || node.isConst()) {
     if (d_varMap.find(node) == d_varMap.end()) {
+      std::cout << "preRegister found: " << node << " : " << node.getKind() << "\n";
       d_varMap[node] = d_numVars;
       d_numVars++;
     }

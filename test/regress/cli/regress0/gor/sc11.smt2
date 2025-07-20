@@ -7,12 +7,12 @@
 (declare-const t Bool)
 (declare-const q Int)
 (declare-const p Int)
+;doesn't trigger bug:
+;(assert (= (+ q p) q))
 (assert (gor.< x y))
 (assert (gor.< y z))
 (assert (gor.< w t))
 (assert (gor.< t w))
-;doesn't trigger bug:
-(assert (= (+ q p) q))
 ;triggers a bug (because it contains a var that is also inside gor.<)
-(assert (= (+ x p) p))
+(assert (= (+ x p) q))
 (check-sat)
