@@ -163,7 +163,7 @@ TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
                                                 std::vector<SkolemLemma>& lems)
 {
   // std::cout << "ppRewrite " << n << std::endl;
-  return TrustNode();
+  return TrustNode::null();
 }
 
 // PPAssertStatus TheoryGenericOrderRelation::ppAssert(

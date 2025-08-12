@@ -7,8 +7,6 @@
 (declare-const t Bool)
 (declare-const q Int)
 (declare-const p Int)
-;doesn't trigger bug:
-;(assert (= (+ q p) q))
 (assert (gor.< x y))
 (assert (gor.< y z))
 (assert (gor.< w t))
