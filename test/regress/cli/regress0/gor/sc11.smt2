@@ -11,6 +11,7 @@
 (assert (gor.< y z))
 (assert (gor.< w t))
 (assert (gor.< t w))
-;triggers a bug (because it contains a var that is also inside gor.<)
+;suppose to treat them as the same var:  (+ q (* (- 1) p))
 (assert (= (+ x p) q))
+(assert (= y (+ (* (- 1) p) q)))
 (check-sat)
