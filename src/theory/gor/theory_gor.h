@@ -18,6 +18,20 @@ namespace cvc5::internal {
 namespace theory {
 namespace gor {
 
+class GorMat {
+  public:
+  /** Map from variables to the first element of their list */
+  std::map<TNode, size_t> d_varMap;
+
+  /** i,jth entry stores edges from i to j. */
+  std::vector<std::vector<bool>> d_matrix;
+
+  /** Number of variables in the graph */
+  size_t d_numVars;
+
+  GorMat() {d_numVars = 0;}
+};
+
 class TheoryGenericOrderRelation : public Theory
 {
  public:
@@ -78,16 +92,19 @@ class TheoryGenericOrderRelation : public Theory
   /** Manages notifications from our equality engine */
   TheoryEqNotifyClass d_eqNotify;
 
-  /** Map from variables to the first element of their list */
-  std::map<TNode, size_t> d_varMap;
+  // /** Map from variables to the first element of their list */
+  // std::map<TNode, size_t> d_varMap;
 
-  /** i,jth entry stores edges from i to j. */
-  std::vector<std::vector<bool>> d_matrix;
+  // /** i,jth entry stores edges from i to j. */
+  // std::vector<std::vector<bool>> d_matrix;
 
-  /** Number of variables in the graph */
-  size_t d_numVars;
+  // /** Number of variables in the graph */
+  // size_t d_numVars;
 
-  bool isHasCycle();
+  // Map from each typeNode to its GorMat
+  std::map<TypeNode, GorMat> d_matMap;
+
+  bool isHasCycle(const GorMat& gorMat);
 }; /* class TheoryGenericOrderRelation */
 
 }  // namespace gor

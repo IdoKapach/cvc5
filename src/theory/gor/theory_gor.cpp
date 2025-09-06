@@ -19,8 +19,7 @@ TheoryGenericOrderRelation::TheoryGenericOrderRelation(Env& env,
 d_rewriter(nodeManager()),
 d_state(env, valuation),
 d_im(env, *this, d_state, getStatsPrefix(THEORY_GOR)),
-d_eqNotify(d_im),
-d_numVars(0)
+d_eqNotify(d_im)
 {
   // std::cout << "constructor\n";
   d_theoryState = &d_state;
@@ -58,36 +57,40 @@ void TheoryGenericOrderRelation::finishInit()
 }
 
 void TheoryGenericOrderRelation::postCheck(Effort level) {
-  for (const auto& [var, index] : d_varMap){
-      std::cout << "  " << var << " => " << index << "\n";
-  }
-  
-  // Print the matrix
-  std::cout << "Matrix contents (" << d_matrix.size() << "x" << (d_matrix.empty() ? 0 : d_matrix[0].size()) << "):\n";
-  for (size_t i = 0; i < d_matrix.size(); ++i) {
-    for (size_t j = 0; j < d_matrix[i].size(); ++j) {
-      std::cout << (d_matrix[i][j] ? "1" : "0") << " ";
+  for (const auto& [type, gorMat] : d_matMap) {
+    for (const auto& [var, index] : gorMat.d_varMap){
+        std::cout << "  " << var << " => " << index << "\n";
     }
-    std::cout << "\n";
-  }
+    
+    // Print the matrix
+    std::cout << "Type:" << type << std::endl;
+    std::cout << "Matrix contents (" << gorMat.d_matrix.size() << "x" << (gorMat.d_matrix.empty() ? 0 : gorMat.d_matrix[0].size()) << "):\n";
+    for (size_t i = 0; i < gorMat.d_matrix.size(); ++i) {
+      for (size_t j = 0; j < gorMat.d_matrix[i].size(); ++j) {
+        std::cout << (gorMat.d_matrix[i][j] ? "1" : "0") << " ";
+      }
+      std::cout << "\n";
+    }
 
-  if (isHasCycle()) {
-    const Node conflict = nodeManager()->mkConst(true);
-    d_im.conflict(conflict, InferenceId::GOR_LEMMA);
+    if (isHasCycle(gorMat)) {
+      const Node conflict = nodeManager()->mkConst(true);
+      d_im.conflict(conflict, InferenceId::GOR_LEMMA);
+    }
   }
 }
 
-bool TheoryGenericOrderRelation::isHasCycle() {
+bool TheoryGenericOrderRelation::isHasCycle(const GorMat& gorMat) {
   // Initiate reachable mat such (after finishing build it) reachable[i][j] == true iff there's a path from i to j.
   // In order to build it, the method uses Floyd-Warshall algorithm.
-  std::vector<std::vector<bool>> reachable = d_matrix;  
+  std::vector<std::vector<bool>> reachable = gorMat.d_matrix;  
+  size_t numVars = gorMat.d_numVars;
 
   // Floyd-Warshall: closure over paths
-  for (size_t k = 0; k < d_numVars; ++k)
+  for (size_t k = 0; k < numVars; ++k)
   {
-    for (size_t i = 0; i < d_numVars; ++i)
+    for (size_t i = 0; i < numVars; ++i)
     {
-      for (size_t j = 0; j < d_numVars; ++j)
+      for (size_t j = 0; j < numVars; ++j)
       {
         if (!reachable[i][j])
         {
@@ -98,7 +101,7 @@ bool TheoryGenericOrderRelation::isHasCycle() {
   }
 
   // Check if there's a cycle in the graph by checking if there's an node that has a path to itself
-  for (size_t i = 0; i < d_numVars; ++i) {
+  for (size_t i = 0; i < numVars; ++i) {
     if (reachable[i][i]) {
       return true;
     }
@@ -114,10 +117,11 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
                                             bool isInternal)
 {
   // std::cout << "notifyFact: " << atom << "\n";
-  if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && !d_matrix.empty()) {
+  if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && !d_matMap[atom[0].getType()].d_matrix.empty()) {
     TNode var0 = atom[0];
     TNode var1 = atom[1];
-    d_matrix[d_varMap[var0]][d_varMap[var1]] = true;
+    TypeNode k = var0.getType();
+    d_matMap[k].d_matrix[d_matMap[k].d_varMap[var0]][d_matMap[k].d_varMap[var1]] = true;
   }
 }
 
@@ -142,22 +146,18 @@ TrustNode TheoryGenericOrderRelation::explain(TNode) {
 
 void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
   std::cout << "preRegister: " << node << " : " << node.getKind() << "\n";
-  // need to refer to all kind of experssions exept of gor.
+  
   if (node.getKind() != Kind::GENERIC_SMALLER_THAN) {
-    if (d_varMap.find(node) == d_varMap.end()) {
-      std::cout << "preRegister found: " << node << " : " << node.getKind() << "\n";
-      d_varMap[node] = d_numVars;
-      d_numVars++;
+    TypeNode nK = node.getType();
+    if (d_matMap.find(nK) == d_matMap.end()) {
+      d_matMap[nK] = GorMat();
     }
-    // return;
+    if (d_matMap[nK].d_varMap.find(node) == d_matMap[nK].d_varMap.end()) {
+      std::cout << "preRegister found: " << node << " : " << node.getKind() << "\n";
+      d_matMap[nK].d_varMap[node] = d_matMap[nK].d_numVars;
+      d_matMap[nK].d_numVars++;
+    }
   }
-
-  // if (node.getKind() != Kind::GENERIC_SMALLER_THAN)
-  // {
-  //   std::stringstream ss;
-  //   ss << "Unsupported assertion in QF_GOR logic: " << node;
-  //   throw LogicException(ss.str());
-  // }
 }
 
 TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
@@ -175,10 +175,13 @@ TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
 
 void TheoryGenericOrderRelation::presolve() {
   std::cout << "preSolve\n";
-  // Initialize adjacency matrix.
-  for (size_t i = 0; i < d_numVars; ++i)
-  {
-    d_matrix.emplace_back(d_numVars, false);
+
+  for (auto& [type, gorMat] : d_matMap){
+    // Initialize adjacency matrix for each kind.
+    for (size_t i = 0; i < gorMat.d_numVars; ++i)
+    {
+      gorMat.d_matrix.emplace_back(gorMat.d_numVars, false);
+    }
   }
 }
 
@@ -190,14 +193,25 @@ bool TheoryGenericOrderRelation::isEntailed(Node n, bool pol) {
 
 bool TheoryGenericOrderRelation::needsCheckLastEffort() {
   std::cout << "lastEffort\n";
-  if (d_matrix.size() == d_numVars) {
-    return false;
+  for (auto& [type, gorMat] : d_matMap){
+    if (gorMat.d_matrix.size() == gorMat.d_numVars) {
+      return false;
+    }
+    // Initialize adjacency matrix for each kind.
+    for (size_t i = 0; i < gorMat.d_numVars; ++i)
+    {
+      gorMat.d_matrix.emplace_back(gorMat.d_numVars, false);
+    }
   }
-  // Initialize the adjacency matrix.
-  for (size_t i = 0; i < d_numVars; ++i)
-  {
-    d_matrix.emplace_back(d_numVars, false);
-  }
+
+  // if (d_matrix.size() == d_numVars) {
+  //   return false;
+  // }
+  // // Initialize the adjacency matrix.
+  // for (size_t i = 0; i < d_numVars; ++i)
+  // {
+  //   d_matrix.emplace_back(d_numVars, false);
+  // }
 
   // Force the theory to participate in solving
   return true;
