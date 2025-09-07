@@ -90,12 +90,17 @@ void TheoryGenericOrderRelation::finishInit()
 
 void TheoryGenericOrderRelation::postCheck(Effort level) {
   for (auto& [type, gorMat] : d_matMap) {
+    std::cout << "Type:" << type << std::endl;
     for (const auto& [var, index] : gorMat.d_varMap){
         std::cout << "  " << var << " => " << index << "\n";
     }
+    for (const auto& p : gorMat.d_forbiddenPaths) {
+    const auto& first = p.first;
+    const auto& second = p.second;
+    std::cout << "  " << first << " !!! " << second << "\n";
+    }
     
     // Print the matrix
-    std::cout << "Type:" << type << std::endl;
     std::cout << "Matrix contents (" << gorMat.d_matrix.size() << "x" << (gorMat.d_matrix.empty() ? 0 : gorMat.d_matrix[0].size()) << "):\n";
     for (size_t i = 0; i < gorMat.d_matrix.size(); ++i) {
       for (size_t j = 0; j < gorMat.d_matrix[i].size(); ++j) {
@@ -118,11 +123,21 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
                                             bool isInternal)
 {
   // std::cout << "notifyFact: " << atom << "\n";
-  if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && !d_matMap[atom[0].getType()].d_matrix.empty()) {
+  if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && pol && !d_matMap[atom[0].getType()].d_matrix.empty()) {
     TNode var0 = atom[0];
     TNode var1 = atom[1];
     TypeNode k = var0.getType();
     d_matMap[k].d_matrix[d_matMap[k].d_varMap[var0]][d_matMap[k].d_varMap[var1]] = true;
+  }
+  
+  else if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && !pol) {
+    TypeNode t = atom[0].getType();
+    TNode arg0 = atom[0];
+    TNode arg1 = atom[1];
+    // If both args are nodes in the graph, append them to d_forbiddenPaths
+    if (d_matMap[t].d_varMap.find(arg0) != d_matMap[t].d_varMap.end() && d_matMap[t].d_varMap.find(arg1) != d_matMap[t].d_varMap.end()) {
+      d_matMap[t].d_forbiddenPaths.emplace_back(std::make_pair(arg0, arg1));
+    }
   }
 }
 

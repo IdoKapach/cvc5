@@ -23,13 +23,18 @@ class GorMat {
   /** Map from variables to the first element of their list */
   std::map<TNode, size_t> d_varMap;
 
-  /** i,jth entry stores edges from i to j. */
+  /** Adjacency matrix. The i,jth entry stores edges from i to j. */
   std::vector<std::vector<bool>> d_matrix;
 
-  /** Number of variables in the graph */
+  /** Number of variables in the graph (in the adjacency matrix) */
   size_t d_numVars;
 
+  /** Vector of TNode pairs that mustn't have a path from the first arg to the second one */
+  std::vector<std::pair<TNode, TNode>> d_forbiddenPaths;
+
   GorMat() {d_numVars = 0;}
+
+  // Check if the graph contain a cycle
   bool isHasCycle();
 };
 
