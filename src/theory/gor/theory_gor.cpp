@@ -12,6 +12,38 @@ namespace cvc5::internal {
 namespace theory {
 namespace gor {
 
+bool GorMat::isHasCycle() {
+  // Initiate reachable mat such (after finishing build it) reachable[i][j] == true iff there's a path from i to j.
+  // In order to build it, the method uses Floyd-Warshall algorithm.
+  std::vector<std::vector<bool>> reachable = d_matrix;  
+  size_t numVars = d_numVars;
+
+  // Floyd-Warshall: closure over paths
+  for (size_t k = 0; k < numVars; ++k)
+  {
+    for (size_t i = 0; i < numVars; ++i)
+    {
+      for (size_t j = 0; j < numVars; ++j)
+      {
+        if (!reachable[i][j])
+        {
+          reachable[i][j] = reachable[i][k] && reachable[k][j];
+        }
+      }
+    }
+  }
+
+  // Check if there's a cycle in the graph by checking if there's an node that has a path to itself
+  for (size_t i = 0; i < numVars; ++i) {
+    if (reachable[i][i]) {
+      return true;
+    }
+  }
+
+  // Return false in case there's no node with path to itself.
+  return false; 
+}
+
 TheoryGenericOrderRelation::TheoryGenericOrderRelation(Env& env,
     OutputChannel& out,
     Valuation valuation)
@@ -57,7 +89,7 @@ void TheoryGenericOrderRelation::finishInit()
 }
 
 void TheoryGenericOrderRelation::postCheck(Effort level) {
-  for (const auto& [type, gorMat] : d_matMap) {
+  for (auto& [type, gorMat] : d_matMap) {
     for (const auto& [var, index] : gorMat.d_varMap){
         std::cout << "  " << var << " => " << index << "\n";
     }
@@ -72,44 +104,13 @@ void TheoryGenericOrderRelation::postCheck(Effort level) {
       std::cout << "\n";
     }
 
-    if (isHasCycle(gorMat)) {
+    if (gorMat.isHasCycle()) {
       const Node conflict = nodeManager()->mkConst(true);
       d_im.conflict(conflict, InferenceId::GOR_LEMMA);
     }
   }
 }
 
-bool TheoryGenericOrderRelation::isHasCycle(const GorMat& gorMat) {
-  // Initiate reachable mat such (after finishing build it) reachable[i][j] == true iff there's a path from i to j.
-  // In order to build it, the method uses Floyd-Warshall algorithm.
-  std::vector<std::vector<bool>> reachable = gorMat.d_matrix;  
-  size_t numVars = gorMat.d_numVars;
-
-  // Floyd-Warshall: closure over paths
-  for (size_t k = 0; k < numVars; ++k)
-  {
-    for (size_t i = 0; i < numVars; ++i)
-    {
-      for (size_t j = 0; j < numVars; ++j)
-      {
-        if (!reachable[i][j])
-        {
-          reachable[i][j] = reachable[i][k] && reachable[k][j];
-        }
-      }
-    }
-  }
-
-  // Check if there's a cycle in the graph by checking if there's an node that has a path to itself
-  for (size_t i = 0; i < numVars; ++i) {
-    if (reachable[i][i]) {
-      return true;
-    }
-  }
-
-  // Return false in case there's no node with path to itself.
-  return false; 
-}
 
 void TheoryGenericOrderRelation::notifyFact(TNode atom,
                                             bool pol,

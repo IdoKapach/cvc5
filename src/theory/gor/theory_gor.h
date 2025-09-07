@@ -30,6 +30,7 @@ class GorMat {
   size_t d_numVars;
 
   GorMat() {d_numVars = 0;}
+  bool isHasCycle();
 };
 
 class TheoryGenericOrderRelation : public Theory
@@ -104,7 +105,7 @@ class TheoryGenericOrderRelation : public Theory
   // Map from each typeNode to its GorMat
   std::map<TypeNode, GorMat> d_matMap;
 
-  bool isHasCycle(const GorMat& gorMat);
+  
 }; /* class TheoryGenericOrderRelation */
 
 }  // namespace gor
