@@ -36,6 +36,12 @@ class GorMat {
 
   // Check if the graph contain a cycle
   bool isHasCycle();
+
+  // Check if the graph contain forbidden path
+  std::optional<std::pair<TNode, TNode>> containForbiddenPath();
+
+  private:
+  std::vector<std::vector<bool>> selfBoolMatProduct(std::vector<std::vector<bool>>& mat);
 };
 
 class TheoryGenericOrderRelation : public Theory

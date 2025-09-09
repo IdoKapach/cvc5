@@ -44,6 +44,56 @@ bool GorMat::isHasCycle() {
   return false; 
 }
 
+std::optional<std::pair<TNode, TNode>> GorMat::containForbiddenPath() {
+  // create a copy of the d_matrix with true values on the slant (which represent self loops in the represented graph)
+  std::vector<std::vector<bool>> c_matrix = d_matrix;
+  for (size_t i = 0; i < d_numVars; ++i) {
+      c_matrix[i][i] = true;
+  }
+
+  // compute c_matrix ^ d_numVars when the exit i,j = true iff there's a path from i to j of length of at most d_numVars
+  //  in the graph of c_matrix.
+  size_t power = 1;
+  while (power < d_numVars) {
+    c_matrix = selfBoolMatProduct(c_matrix);
+    power *= 2;
+  }
+
+  // check for each pair in d_forbiddenPaths if there's a path from the first arg to the second one. If so, return that pair.
+  for (std::pair<TNode, TNode>& pair : d_forbiddenPaths) {
+    size_t first = d_varMap[pair.first], second = d_varMap[pair.second];
+    if (c_matrix[first][second]) {
+      return pair;
+    }
+  }
+
+  return std::nullopt;
+}
+
+std::vector<std::vector<bool>> GorMat::selfBoolMatProduct(std::vector<std::vector<bool>>& mat) {
+  // Initialize nMat which will represent mat * mat.
+  std::vector<std::vector<bool>> nMat;
+  for (size_t i = 0; i < d_numVars; ++i)
+  {
+    nMat.emplace_back(d_numVars, false);
+  }
+
+  for (size_t i = 0; i < d_numVars; ++i) { 
+    for (size_t j = 0; j < d_numVars; ++j) {
+      bool bOr = false;
+      for (size_t k = 0; k < d_numVars; ++k) {
+        bOr = bOr || (mat[i][k] && mat[k][j]);
+      }
+      nMat[i][j] = bOr;
+    }
+  }
+
+  return nMat;
+}
+
+
+
+
 TheoryGenericOrderRelation::TheoryGenericOrderRelation(Env& env,
     OutputChannel& out,
     Valuation valuation)
@@ -109,7 +159,15 @@ void TheoryGenericOrderRelation::postCheck(Effort level) {
       std::cout << "\n";
     }
 
+    // check if there's a cycle in the graph which causes a conflict
     if (gorMat.isHasCycle()) {
+      const Node conflict = nodeManager()->mkConst(true);
+      d_im.conflict(conflict, InferenceId::GOR_LEMMA);
+    }
+    // check if the graph contain forbidden path
+    std::optional<std::pair<TNode, TNode>> pair = gorMat.containForbiddenPath();
+    if (pair) {
+      std::cout << "CONFLICT: " << pair ->first << " -> " << pair ->second << "\n";
       const Node conflict = nodeManager()->mkConst(true);
       d_im.conflict(conflict, InferenceId::GOR_LEMMA);
     }
@@ -134,6 +192,10 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
     TypeNode t = atom[0].getType();
     TNode arg0 = atom[0];
     TNode arg1 = atom[1];
+    // There's no need to add a pair in case the 2 args equal since the graph will contain a cycle in that case.
+    if (arg0 == arg1) {
+      return;
+    }
     // If both args are nodes in the graph, append them to d_forbiddenPaths
     if (d_matMap[t].d_varMap.find(arg0) != d_matMap[t].d_varMap.end() && d_matMap[t].d_varMap.find(arg1) != d_matMap[t].d_varMap.end()) {
       d_matMap[t].d_forbiddenPaths.emplace_back(std::make_pair(arg0, arg1));
@@ -213,7 +275,7 @@ bool TheoryGenericOrderRelation::needsCheckLastEffort() {
     if (gorMat.d_matrix.size() == gorMat.d_numVars) {
       return false;
     }
-    // Initialize adjacency matrix for each kind.
+    // Initialize adjacency matrix for each type.
     for (size_t i = 0; i < gorMat.d_numVars; ++i)
     {
       gorMat.d_matrix.emplace_back(gorMat.d_numVars, false);
