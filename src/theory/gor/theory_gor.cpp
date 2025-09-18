@@ -16,7 +16,7 @@ bool GorMat::isHasCycle() {
   // Initiate reachable mat such (after finishing build it) reachable[i][j] == true iff there's a path from i to j.
   // In order to build it, the method uses Floyd-Warshall algorithm.
   std::vector<std::vector<bool>> reachable = d_matrix;  
-  size_t numVars = d_numVars;
+  size_t numVars = d_numExps;
 
   // Floyd-Warshall: closure over paths
   for (size_t k = 0; k < numVars; ++k)
@@ -44,25 +44,30 @@ bool GorMat::isHasCycle() {
   return false; 
 }
 
-std::optional<std::pair<TNode, TNode>> GorMat::containForbiddenPath() {
-  // create a copy of the d_matrix with true values on the slant (which represent self loops in the represented graph)
-  std::vector<std::vector<bool>> c_matrix = d_matrix;
-  for (size_t i = 0; i < d_numVars; ++i) {
-      c_matrix[i][i] = true;
+void GorMat::computeReachableMatrix() {
+  // Intialize d_reachableMatrix as a copy of the d_matrix with true values on the slant
+  //  (which represent self loops in the represented graph)
+  d_reachableMatrix = d_matrix;
+  for (size_t i = 0; i < d_numExps; ++i) {
+      d_reachableMatrix[i][i] = true;
   }
 
-  // compute c_matrix ^ d_numVars when the exit i,j = true iff there's a path from i to j of length of at most d_numVars
+  // compute d_reachableMatrix ^ d_numVars when the exit i,j = true iff there's a path from i to j of length of at most d_numVars
   //  in the graph of c_matrix.
   size_t power = 1;
-  while (power < d_numVars) {
-    c_matrix = selfBoolMatProduct(c_matrix);
+  while (power < d_numExps) {
+    d_reachableMatrix = selfBoolMatProduct(d_reachableMatrix);
     power *= 2;
   }
+}
+
+std::optional<std::pair<TNode, TNode>> GorMat::containForbiddenPath() {
+  computeReachableMatrix();
 
   // check for each pair in d_forbiddenPaths if there's a path from the first arg to the second one. If so, return that pair.
   for (std::pair<TNode, TNode>& pair : d_forbiddenPaths) {
-    size_t first = d_varMap[pair.first], second = d_varMap[pair.second];
-    if (c_matrix[first][second]) {
+    size_t first = d_gorExpMap[pair.first], second = d_gorExpMap[pair.second];
+    if (d_reachableMatrix[first][second]) {
       return pair;
     }
   }
@@ -73,15 +78,15 @@ std::optional<std::pair<TNode, TNode>> GorMat::containForbiddenPath() {
 std::vector<std::vector<bool>> GorMat::selfBoolMatProduct(std::vector<std::vector<bool>>& mat) {
   // Initialize nMat which will represent mat * mat.
   std::vector<std::vector<bool>> nMat;
-  for (size_t i = 0; i < d_numVars; ++i)
+  for (size_t i = 0; i < d_numExps; ++i)
   {
-    nMat.emplace_back(d_numVars, false);
+    nMat.emplace_back(d_numExps, false);
   }
 
-  for (size_t i = 0; i < d_numVars; ++i) { 
-    for (size_t j = 0; j < d_numVars; ++j) {
+  for (size_t i = 0; i < d_numExps; ++i) { 
+    for (size_t j = 0; j < d_numExps; ++j) {
       bool bOr = false;
-      for (size_t k = 0; k < d_numVars; ++k) {
+      for (size_t k = 0; k < d_numExps; ++k) {
         bOr = bOr || (mat[i][k] && mat[k][j]);
       }
       nMat[i][j] = bOr;
@@ -141,7 +146,7 @@ void TheoryGenericOrderRelation::finishInit()
 void TheoryGenericOrderRelation::postCheck(Effort level) {
   for (auto& [type, gorMat] : d_matMap) {
     std::cout << "Type:" << type << std::endl;
-    for (const auto& [var, index] : gorMat.d_varMap){
+    for (const auto& [var, index] : gorMat.d_gorExpMap){
         std::cout << "  " << var << " => " << index << "\n";
     }
     for (const auto& p : gorMat.d_forbiddenPaths) {
@@ -185,7 +190,7 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
     TNode var0 = atom[0];
     TNode var1 = atom[1];
     TypeNode k = var0.getType();
-    d_matMap[k].d_matrix[d_matMap[k].d_varMap[var0]][d_matMap[k].d_varMap[var1]] = true;
+    d_matMap[k].d_matrix[d_matMap[k].d_gorExpMap[var0]][d_matMap[k].d_gorExpMap[var1]] = true;
   }
   
   else if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && !pol) {
@@ -197,7 +202,7 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
       return;
     }
     // If both args are nodes in the graph, append them to d_forbiddenPaths
-    if (d_matMap[t].d_varMap.find(arg0) != d_matMap[t].d_varMap.end() && d_matMap[t].d_varMap.find(arg1) != d_matMap[t].d_varMap.end()) {
+    if (d_matMap[t].d_gorExpMap.find(arg0) != d_matMap[t].d_gorExpMap.end() && d_matMap[t].d_gorExpMap.find(arg1) != d_matMap[t].d_gorExpMap.end()) {
       d_matMap[t].d_forbiddenPaths.emplace_back(std::make_pair(arg0, arg1));
     }
   }
@@ -230,10 +235,10 @@ void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
     if (d_matMap.find(nK) == d_matMap.end()) {
       d_matMap[nK] = GorMat();
     }
-    if (d_matMap[nK].d_varMap.find(node) == d_matMap[nK].d_varMap.end()) {
+    if (d_matMap[nK].d_gorExpMap.find(node) == d_matMap[nK].d_gorExpMap.end()) {
       std::cout << "preRegister found: " << node << " : " << node.getKind() << "\n";
-      d_matMap[nK].d_varMap[node] = d_matMap[nK].d_numVars;
-      d_matMap[nK].d_numVars++;
+      d_matMap[nK].d_gorExpMap[node] = d_matMap[nK].d_numExps;
+      d_matMap[nK].d_numExps++;
     }
   }
 }
@@ -256,9 +261,9 @@ void TheoryGenericOrderRelation::presolve() {
 
   for (auto& [type, gorMat] : d_matMap){
     // Initialize adjacency matrix for each kind.
-    for (size_t i = 0; i < gorMat.d_numVars; ++i)
+    for (size_t i = 0; i < gorMat.d_numExps; ++i)
     {
-      gorMat.d_matrix.emplace_back(gorMat.d_numVars, false);
+      gorMat.d_matrix.emplace_back(gorMat.d_numExps, false);
     }
   }
 }
@@ -272,13 +277,13 @@ bool TheoryGenericOrderRelation::isEntailed(Node n, bool pol) {
 bool TheoryGenericOrderRelation::needsCheckLastEffort() {
   std::cout << "lastEffort\n";
   for (auto& [type, gorMat] : d_matMap){
-    if (gorMat.d_matrix.size() == gorMat.d_numVars) {
+    if (gorMat.d_matrix.size() == gorMat.d_numExps) {
       return false;
     }
     // Initialize adjacency matrix for each type.
-    for (size_t i = 0; i < gorMat.d_numVars; ++i)
+    for (size_t i = 0; i < gorMat.d_numExps; ++i)
     {
-      gorMat.d_matrix.emplace_back(gorMat.d_numVars, false);
+      gorMat.d_matrix.emplace_back(gorMat.d_numExps, false);
     }
   }
 

@@ -20,19 +20,22 @@ namespace gor {
 
 class GorMat {
   public:
-  /** Map from variables to the first element of their list */
-  std::map<TNode, size_t> d_varMap;
+  /** Map from gor arguments to the first element of their list */
+  std::map<TNode, size_t> d_gorExpMap;
 
   /** Adjacency matrix. The i,jth entry stores edges from i to j. */
   std::vector<std::vector<bool>> d_matrix;
 
-  /** Number of variables in the graph (in the adjacency matrix) */
-  size_t d_numVars;
+  /** Number of distinct gor arguments in the graph (in the adjacency matrix) */
+  size_t d_numExps;
 
   /** Vector of TNode pairs that mustn't have a path from the first arg to the second one */
   std::vector<std::pair<TNode, TNode>> d_forbiddenPaths;
 
-  GorMat() {d_numVars = 0;}
+  /** Matrix that each exit i,j of it equals true iff there's a path from i to j of length of at most d_numVars */
+  std::vector<std::vector<bool>> d_reachableMatrix; 
+
+  GorMat() {d_numExps = 0;}
 
   // Check if the graph contain a cycle
   bool isHasCycle();
@@ -42,6 +45,7 @@ class GorMat {
 
   private:
   std::vector<std::vector<bool>> selfBoolMatProduct(std::vector<std::vector<bool>>& mat);
+  void computeReachableMatrix();
 };
 
 class TheoryGenericOrderRelation : public Theory
