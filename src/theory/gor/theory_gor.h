@@ -20,6 +20,9 @@ namespace gor {
 
 class GorMat {
   public:
+  /** Vector of the vars that participate in the gor operations */
+  std::set<TNode> d_vars;
+
   /** Map from gor arguments to the first element of their list */
   std::map<TNode, size_t> d_gorExpMap;
 
@@ -43,9 +46,10 @@ class GorMat {
   // Check if the graph contain forbidden path
   std::optional<std::pair<TNode, TNode>> containForbiddenPath();
 
+  void computeReachableMatrix();
+
   private:
   std::vector<std::vector<bool>> selfBoolMatProduct(std::vector<std::vector<bool>>& mat);
-  void computeReachableMatrix();
 };
 
 class TheoryGenericOrderRelation : public Theory
@@ -94,7 +98,7 @@ class TheoryGenericOrderRelation : public Theory
   bool needsCheckLastEffort() override;
 
  private:
- std::vector<Node> d_relations;
+  std::vector<Node> d_relations;
 
 
   TheoryGenericOrderRelationRewriter d_rewriter;
@@ -108,19 +112,14 @@ class TheoryGenericOrderRelation : public Theory
   /** Manages notifications from our equality engine */
   TheoryEqNotifyClass d_eqNotify;
 
-  // /** Map from variables to the first element of their list */
-  // std::map<TNode, size_t> d_varMap;
-
-  // /** i,jth entry stores edges from i to j. */
-  // std::vector<std::vector<bool>> d_matrix;
-
-  // /** Number of variables in the graph */
-  // size_t d_numVars;
-
   // Map from each typeNode to its GorMat
   std::map<TypeNode, GorMat> d_matMap;
 
-  
+  bool d_lastEffortCalled = false;
+
+  // enforce for each (i,j) with d_reachableMatrix[i][j] == true, exp_i != exp_j as a lemma during solving
+  void enforceDisequalities(GorMat& gorMat);
+
 }; /* class TheoryGenericOrderRelation */
 
 }  // namespace gor

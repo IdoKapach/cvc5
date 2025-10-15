@@ -36,3 +36,4 @@
 (assert (not (gor.< b q)))
 (assert (not (gor.< b t)))
 (check-sat)
+(get-model)

@@ -27,3 +27,4 @@
 (assert (gor.< x q))
 (assert (gor.< w b))
 (check-sat)
+(get-model)

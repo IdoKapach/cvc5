@@ -15,3 +15,4 @@
 (assert (gor.< y q))
 (assert (gor.< q z))
 (check-sat)
+(get-model)
