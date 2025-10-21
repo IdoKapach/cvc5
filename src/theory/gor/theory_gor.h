@@ -38,6 +38,9 @@ class GorMat {
   /** Matrix that each exit i,j of it equals true iff there's a path from i to j of length of at most d_numVars */
   std::vector<std::vector<bool>> d_reachableMatrix; 
 
+  // vector that contains all the pairs that the gor relation was applied on
+  Node d_gorPairs = Node::null();
+
   GorMat() {d_numExps = 0;}
 
   // Check if the graph contain a cycle
@@ -118,7 +121,7 @@ class TheoryGenericOrderRelation : public Theory
   bool d_lastEffortCalled = false;
 
   // enforce for each (i,j) with d_reachableMatrix[i][j] == true, exp_i != exp_j as a lemma during solving
-  void enforceDisequalities(GorMat& gorMat);
+  void enforceDisequalities(GorMat& gorMat, TypeNode type);
 
 }; /* class TheoryGenericOrderRelation */
 

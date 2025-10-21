@@ -512,6 +512,7 @@ void LogicInfo::setLogicString(std::string logicString)
           enableTheory(THEORY_GOR);
           enableTheory(THEORY_UF);
           enableTheory(THEORY_ARRAYS);
+          enableTheory(THEORY_STRINGS);
           
           enableIntegers();
           enableReals();

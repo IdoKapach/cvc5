@@ -8,6 +8,9 @@
 #include "util/statistics_registry.h"
 #include "util/utility.h"
 
+#include "expr/skolem_manager.h"
+#include "util/string.h"
+
 namespace cvc5::internal {
 namespace theory {
 namespace gor {
@@ -187,12 +190,17 @@ void TheoryGenericOrderRelation::postCheck(Effort level) {
       d_im.conflict(conflict, InferenceId::GOR_LEMMA);
     } 
 
-    enforceDisequalities(gorMat);
+    enforceDisequalities(gorMat, type);
   }
 
 }
 
-void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat) {
+void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat, TypeNode type) {
+  std::vector<Node> pairs;
+
+  // std::stringstream pairs;
+  // pairs << "[";
+
   // enforce for each (i,j) with d_reachableMatrix[i][j] == true, exp_i != exp_j as a lemma during solving
   for (const auto& [exp_i, i] : gorMat.d_gorExpMap) {
     for (const auto& [exp_j, j] : gorMat.d_gorExpMap) {
@@ -202,9 +210,36 @@ void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat) {
         Node diseq = nodeManager()->mkNode(Kind::NOT, 
                           nodeManager()->mkNode(Kind::EQUAL, exp_i, exp_j));
         d_im.lemma(diseq, InferenceId::GOR_LEMMA);
+
+        // Store the pair (exp_i, exp_j) in d_gorPairs field
+        Node pairNode = nodeManager()->mkNode(Kind::SEXPR,
+                                            exp_i, exp_j);
+                                            
+        pairs.push_back(pairNode);
+
+        // pairs << pairNode << " ";
       }
     }
   }
+
+  // std::string result = pairs.str();
+  // result.pop_back(); // remove last space
+  // result.pop_back(); // remove last comma
+  // pairs.str(result);
+  // pairs << "]";
+  // result = pairs.str();
+  // gorMat.d_gorPairs = nodeManager()->mkConst(String(pairs.str()));
+
+  gorMat.d_gorPairs = nodeManager()->mkNode(Kind::SEXPR, pairs);
+  
+
+  // std::stringstream varName;
+  // varName << "gor_pairs_<" << type << ">";
+  // TypeNode sexprType = nodeManager()->mkAbstractType(Kind::ABSTRACT_TYPE);
+  // Node sym = nodeManager()->getSkolemManager()->mkDummySkolem(varName.str(), gorMat.d_gorPairs.getType(),"GOR list of pairs (syntactic only)");
+  // d_im.lemma(
+  //     nodeManager()->mkNode(Kind::EQUAL, d_pairs, pairs),
+  //     InferenceId::GOR_LEMMA);
 }
 
 
@@ -274,6 +309,25 @@ bool TheoryGenericOrderRelation::collectModelValues(
   //   }
     
   // }
+
+  // SkolemManager* sm = nodeManager()->getSkolemManager();
+  for (const auto& [type, gorMat] : d_matMap) {
+    if (!gorMat.d_gorPairs.isNull()) {
+      std::cout << "gor pairs for type \'" << type << "\': " << gorMat.d_gorPairs << std::endl;
+
+
+      // std::stringstream varName;
+      // varName << "gor_pairs_<" << type << ">";
+      // TypeNode sexprType = nodeManager()->mkAbstractType(Kind::ABSTRACT_TYPE);
+      // Node sym = nodeManager()->getSkolemManager()->mkDummySkolem(varName.str(), gorMat.d_gorPairs.getType(),"GOR list of pairs (syntactic only)");
+      // m->getEqualityEngine()->addTerm(sym);
+      // m->assertEquality(sym, sym, true);
+
+      // if (!m->assertEquality(sym, gorMat.d_gorPairs, true)) {
+      //   return false;
+      // }
+    }
+  }
   
   return true;
 }

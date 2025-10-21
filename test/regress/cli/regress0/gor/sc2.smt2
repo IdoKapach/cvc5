@@ -16,3 +16,4 @@
 (assert (gor.< a c))
 (assert (gor.< b c))
 (check-sat)
+(get-model)
