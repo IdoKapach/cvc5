@@ -39,7 +39,8 @@ class GorMat {
   std::vector<std::vector<bool>> d_reachableMatrix; 
 
   // vector that contains all the pairs that the gor relation was applied on
-  Node d_gorPairs = Node::null();
+  // Node d_gorPairs = Node::null();
+  std::vector<Node> d_gorPairs;
 
   GorMat() {d_numExps = 0;}
 

@@ -198,9 +198,6 @@ void TheoryGenericOrderRelation::postCheck(Effort level) {
 void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat, TypeNode type) {
   std::vector<Node> pairs;
 
-  // std::stringstream pairs;
-  // pairs << "[";
-
   // enforce for each (i,j) with d_reachableMatrix[i][j] == true, exp_i != exp_j as a lemma during solving
   for (const auto& [exp_i, i] : gorMat.d_gorExpMap) {
     for (const auto& [exp_j, j] : gorMat.d_gorExpMap) {
@@ -216,30 +213,15 @@ void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat, TypeNode t
                                             exp_i, exp_j);
                                             
         pairs.push_back(pairNode);
-
-        // pairs << pairNode << " ";
       }
     }
   }
 
-  // std::string result = pairs.str();
-  // result.pop_back(); // remove last space
-  // result.pop_back(); // remove last comma
-  // pairs.str(result);
-  // pairs << "]";
-  // result = pairs.str();
-  // gorMat.d_gorPairs = nodeManager()->mkConst(String(pairs.str()));
+  // if d_gorPairs is a Node:
+  // gorMat.d_gorPairs = nodeManager()->mkNode(Kind::SEXPR, pairs);
 
-  gorMat.d_gorPairs = nodeManager()->mkNode(Kind::SEXPR, pairs);
-  
-
-  // std::stringstream varName;
-  // varName << "gor_pairs_<" << type << ">";
-  // TypeNode sexprType = nodeManager()->mkAbstractType(Kind::ABSTRACT_TYPE);
-  // Node sym = nodeManager()->getSkolemManager()->mkDummySkolem(varName.str(), gorMat.d_gorPairs.getType(),"GOR list of pairs (syntactic only)");
-  // d_im.lemma(
-  //     nodeManager()->mkNode(Kind::EQUAL, d_pairs, pairs),
-  //     InferenceId::GOR_LEMMA);
+  // if d_gorPairs is a vector<Node>:
+  gorMat.d_gorPairs = pairs;
 }
 
 
@@ -278,43 +260,16 @@ bool TheoryGenericOrderRelation::collectModelValues(
     TheoryModel* m, const std::set<Node>& termSet)
 {
   std::cout << "collectModelValues\n";
-
-  // // For each (i,j) with d_reachableMatrix[i][j] == true, enforce exp_i != exp_j
-  // for (const auto& [type, gorMat] : d_matMap)
-  // {
-  //   if (gorMat.d_reachableMatrix.empty()) {
-  //     tM = m;
-  //     return true;
-  //   }
-  //   // Print the matrix
-  //   std::cout << "d_reachableMatrix contents (" << gorMat.d_matrix.size() << "x" << (gorMat.d_matrix.empty() ? 0 : gorMat.d_matrix[0].size()) << "):\n";
-  //   for (size_t i = 0; i < gorMat.d_matrix.size(); ++i) {
-  //     for (size_t j = 0; j < gorMat.d_matrix[i].size(); ++j) {
-  //       std::cout << (gorMat.d_reachableMatrix[i][j] ? "1" : "0") << " ";
-  //     }
-  //     std::cout << "\n";
-  //   }
-    
-  //   for (const auto& [exp_i, i] : gorMat.d_gorExpMap) {
-  //     for (const auto& [exp_j, j] : gorMat.d_gorExpMap) {
-  //       if (gorMat.d_reachableMatrix[i][j] && i != j) {
-  //         std::cout << "  Enforce: " << exp_i << " != " << exp_j << "\n";
-  //         if (!m->assertEquality(exp_i, exp_j, true))
-  //         {
-  //           std::cout << " CAN'T Enforce: " << exp_i << " != " << exp_j << "\n";
-  //           return false; // model conflict
-  //         }
-  //       }
-  //     }
-  //   }
-    
-  // }
-
+  // PART OF THE FAILED ATTEMPTS TO ADD THE gor PAIRS TO THE MODEL AS A SINGLE NODE OR AS A COMMENT ---
   // SkolemManager* sm = nodeManager()->getSkolemManager();
-  for (const auto& [type, gorMat] : d_matMap) {
-    if (!gorMat.d_gorPairs.isNull()) {
-      std::cout << "gor pairs for type \'" << type << "\': " << gorMat.d_gorPairs << std::endl;
+  // RepSet* repset = m->getRepSetPtr();
+  // repset->d_type_reps[nodeManager() -> stringType()];
 
+  for (const auto& [type, gorMat] : d_matMap) {
+    if (!gorMat.d_gorPairs.empty()) {
+      std::cout << "gor pairs for type \'" << type << "\': " << gorMat.d_gorPairs << "\n";
+
+      // SOME FAILED ATTEMPTS TO ADD THE gor PAIRS TO THE MODEL AS A SINGLE NODE OR AS A COMMENT ---
 
       // std::stringstream varName;
       // varName << "gor_pairs_<" << type << ">";
@@ -326,6 +281,10 @@ bool TheoryGenericOrderRelation::collectModelValues(
       // if (!m->assertEquality(sym, gorMat.d_gorPairs, true)) {
       //   return false;
       // }
+
+      // Node n = nodeManager()->mkConst(String(gorMat.d_gorPairs.toString()));
+      // repset->add(n.getType(), n);
+      // repset -> toStream(std::cout);      
     }
   }
   
