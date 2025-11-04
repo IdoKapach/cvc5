@@ -141,6 +141,11 @@ void Smt2State::addFiniteFieldOperators()
   addOperator(cvc5::Kind::FINITE_FIELD_BITSUM, "ff.bitsum");
 }
 
+void Smt2State::addGenericOrderRelationOperators()
+{
+  addOperator(cvc5::Kind::GENERIC_SMALLER_THAN, "gor.<");
+}
+
 void Smt2State::addDatatypesOperators()
 {
   ParserState::addOperator(Kind::APPLY_CONSTRUCTOR);
@@ -1016,6 +1021,11 @@ void Smt2State::setLogic(std::string name)
   if (d_logic.isTheoryEnabled(internal::theory::THEORY_FF))
   {
     addFiniteFieldOperators();
+  }
+
+  if (d_logic.isTheoryEnabled(internal::theory::THEORY_GOR))
+  {
+    addGenericOrderRelationOperators();
   }
 
   if (d_logic.isTheoryEnabled(internal::theory::THEORY_SEP))

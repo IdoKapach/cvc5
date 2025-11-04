@@ -449,6 +449,8 @@ class Smt2State : public ParserState
 
   void addFiniteFieldOperators();
 
+  void addGenericOrderRelationOperators();
+
   void addDatatypesOperators();
 
   void addStringOperators();

@@ -316,6 +316,11 @@ std::string LogicInfo::getLogicString() const {
         ss << "FF";
         ++seen;
       }
+      if (d_theories[THEORY_GOR])
+      {
+        ss << "GOR";
+        ++seen;
+      }
       if(d_theories[THEORY_FP]) {
         ss << "FP";
         ++seen;
@@ -500,6 +505,19 @@ void LogicInfo::setLogicString(std::string logicString)
           checkDuplicateTheory(THEORY_FF, "FF");
           enableTheory(THEORY_FF);
           p += 2;
+        }
+        else if (!strncmp(p, "GOR", 3))
+        {
+          checkDuplicateTheory(THEORY_GOR, "GOR");
+          enableTheory(THEORY_GOR);
+          enableTheory(THEORY_UF);
+          enableTheory(THEORY_ARRAYS);
+          enableTheory(THEORY_STRINGS);
+          
+          enableIntegers();
+          enableReals();
+          arithNonLinear();
+          p += 3;
         }
         else if (!strncmp(p, "FP", 2))
         {

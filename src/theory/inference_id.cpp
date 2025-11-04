@@ -116,6 +116,8 @@ const char* toString(InferenceId i)
       return "ARITH_NL_ICP_PROPAGATION";
     case InferenceId::FF_LEMMA: return "FF_LEMMA";
 
+    case InferenceId::GOR_LEMMA: return "GOR_LEMMA";
+
     case InferenceId::ARRAYS_EXT: return "ARRAYS_EXT";
     case InferenceId::ARRAYS_READ_OVER_WRITE: return "ARRAYS_READ_OVER_WRITE";
     case InferenceId::ARRAYS_READ_OVER_WRITE_1: return "ARRAYS_READ_OVER_WRITE_1";
