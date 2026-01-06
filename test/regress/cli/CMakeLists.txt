@@ -950,7 +950,29 @@ set(regress_0_tests
   regress0/get-value-no-evaluate.smt2
   regress0/get-value-reals-ints.smt2
   regress0/get-value-reals.smt2
+
+  regress0/gor/exp/t1.smt2
+  regress0/gor/exp/t2.smt2
+  regress0/gor/exp/t3.smt2
+  regress0/gor/not/t1.smt2
+  regress0/gor/not/t2.smt2
+  regress0/gor/not/t3.smt2
+  regress0/gor/not/t4.smt2
+  regress0/gor/not/t5.smt2
+  regress0/gor/not/t6.smt2
   regress0/gor/sc1.smt2
+  regress0/gor/sc2.smt2
+  regress0/gor/sc3.smt2
+  regress0/gor/sc4.smt2
+  regress0/gor/sc5.smt2
+  regress0/gor/sc6.smt2
+  regress0/gor/sc7.smt2
+  regress0/gor/sc8.smt2
+  regress0/gor/sc9.smt2
+  regress0/gor/sc10.smt2
+  regress0/gor/sc11.smt2
+  regress0/gor/support_st.smt2
+  
   regress0/ho/apply-collapse-sat.smt2
   regress0/ho/apply-collapse-unsat.smt2
   regress0/ho/bug_nodbuilding_interpreted_SYO042^1.smt2

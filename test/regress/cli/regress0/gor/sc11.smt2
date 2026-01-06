@@ -10,7 +10,6 @@
 (assert (gor.< x y))
 (assert (gor.< y z))
 (assert (gor.< w t))
-; those constrains makes the theory to treat x and y as the same var: (+ q (* (- 1) p))
 (assert (= (+ x p) q))
 (assert (= y (+ (* (- 1) p) q)))
 (check-sat)

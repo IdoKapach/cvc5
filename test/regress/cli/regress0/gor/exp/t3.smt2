@@ -1,4 +1,4 @@
-(set-logic QF_GOR)
+(set-logic ALL)
 (set-info :status unsat)
 (declare-const x Int)
 (declare-const y Int)

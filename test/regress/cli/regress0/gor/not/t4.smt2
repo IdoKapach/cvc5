@@ -1,4 +1,19 @@
-(set-logic QF_GOR)
+; COMMAND-LINE: --produce-models
+; EXPECT: sat
+; EXPECT: (
+; EXPECT: (define-fun x () Int 0)
+; EXPECT: (define-fun y () Int 1)
+; EXPECT: (define-fun z () Int 2)
+; EXPECT: (define-fun a () Int 3)
+; EXPECT: (define-fun b () Int 4)
+; EXPECT: (define-fun w () Int 5)
+; EXPECT: (define-fun t () Int 6)
+; EXPECT: (define-fun p () Int 7)
+; EXPECT: (define-fun q () Int 8)
+; EXPECT: )
+; EXIT: 0
+
+(set-logic ALL)
 (set-info :status sat)
 (declare-const x Int)
 (declare-const y Int)

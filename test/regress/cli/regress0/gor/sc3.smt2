@@ -1,4 +1,4 @@
-(set-logic HO_QF_GOR)
+(set-logic HO_ALL)
 (set-info :status unsat)
 (declare-sort S 0)
 (declare-const x S)

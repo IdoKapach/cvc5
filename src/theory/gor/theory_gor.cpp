@@ -11,6 +11,12 @@
 #include "expr/skolem_manager.h"
 #include "util/string.h"
 
+#include "proof/trust_node.h"
+#include "proof/proof_generator.h"
+#include "expr/node.h"
+#include "expr/node_manager.h"
+
+
 namespace cvc5::internal {
 namespace theory {
 namespace gor {
@@ -50,7 +56,9 @@ bool GorMat::isHasCycle() {
 void GorMat::computeReachableMatrix() {
   // Intialize d_reachableMatrix as a copy of the d_matrix with true values on the slant
   //  (which represent self loops in the represented graph)
-  std::cout << "!!!!!!the reachable computed!!!!!\n";
+
+  // std::cout << "!!!!!!the reachable computed!!!!!\n";
+
   d_reachableMatrix = d_matrix;
   for (size_t i = 0; i < d_numExps; ++i) {
       d_reachableMatrix[i][i] = true;
@@ -152,41 +160,52 @@ void TheoryGenericOrderRelation::finishInit()
 }
 
 void TheoryGenericOrderRelation::postCheck(Effort level) {
+  // std::cout << "postCheck: " << level << "\n";
   for (auto& [type, gorMat] : d_matMap) {
 
     // --- PRINTS ---
-    std::cout << "Type:" << type << std::endl;
+    Trace("gor::solver") << "Type: " << type << std::endl;
     for (const auto& [var, index] : gorMat.d_gorExpMap){
-        std::cout << "  " << var << " => " << index << "\n";
+        Trace("gor::solver") << "  " << var << " => " << index << "\n";
     }
     for (const auto& p : gorMat.d_forbiddenPaths) {
       const auto& first = p.first;
       const auto& second = p.second;
-      std::cout << "  " << first << " !!! " << second << "\n";
+      Trace("gor::solver") << "  " << first << " !!! " << second << "\n";
     }
 
-    std::cout << "VARS: " << gorMat.d_vars << std::endl;
+    Trace("gor::solver") << "VARS: " << gorMat.d_vars << std::endl;
     
     // Print the matrix
-    std::cout << "Matrix contents (" << gorMat.d_matrix.size() << "x" << (gorMat.d_matrix.empty() ? 0 : gorMat.d_matrix[0].size()) << "):\n";
+    Trace("gor::solver") << "Matrix contents (" << gorMat.d_matrix.size() << "x" << (gorMat.d_matrix.empty() ? 0 : gorMat.d_matrix[0].size()) << "):\n";
     for (size_t i = 0; i < gorMat.d_matrix.size(); ++i) {
       for (size_t j = 0; j < gorMat.d_matrix[i].size(); ++j) {
-        std::cout << (gorMat.d_matrix[i][j] ? "1" : "0") << " ";
+        Trace("gor::solver") << (gorMat.d_matrix[i][j] ? "1" : "0") << " ";
       }
-      std::cout << "\n";
+      Trace("gor::solver") << "\n";
     }
     // --- PRINTS ---
 
     // check if there's a cycle in the graph which causes a conflict
     if (gorMat.isHasCycle()) {
-      const Node conflict = nodeManager()->mkConst(true);
+      // std::cout << "CONFLICT: cycle detected\n";
+      Trace("gor::solver") << "CONFLICT: cycle detected\n";
+      Node n = nodeManager()->mkConst<bool>(false);
+      Node lit = nodeManager()->mkNode(Kind::GENERIC_SMALLER_THAN, n, n);
+      Node conflict = lit;
       d_im.conflict(conflict, InferenceId::GOR_LEMMA);
+      // std::cout << "after conflict\n";
+      return;
     }
     // check if the graph contains a forbidden path
     std::optional<std::pair<TNode, TNode>> pair = gorMat.containForbiddenPath();
     if (pair) {
-      std::cout << "CONFLICT: " << pair ->first << " -> " << pair ->second << "\n";
-      const Node conflict = nodeManager()->mkConst(true);
+      Trace("gor::solver") << "CONFLICT: " << pair ->first << " -> " << pair ->second << "\n";
+      // Node conflict = nodeManager()->mkConst<bool>(false);
+      // d_im.conflict(conflict, InferenceId::GOR_LEMMA);
+      Node n = nodeManager()->mkConst<bool>(false);
+      Node lit = nodeManager()->mkNode(Kind::GENERIC_SMALLER_THAN, n, n);
+      Node conflict = nodeManager()->mkNode(Kind::NOT, lit);
       d_im.conflict(conflict, InferenceId::GOR_LEMMA);
     } 
 
@@ -204,6 +223,7 @@ void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat, TypeNode t
       if (gorMat.d_reachableMatrix[i][j] && i != j)
       {
         // Enforce x != y as a lemma during solving
+        Trace("gor::solver") << "ENFORCE DISEQUALITY: " << exp_i << " != " << exp_j << "\n";
         Node diseq = nodeManager()->mkNode(Kind::NOT, 
                           nodeManager()->mkNode(Kind::EQUAL, exp_i, exp_j));
         d_im.lemma(diseq, InferenceId::GOR_LEMMA);
@@ -230,7 +250,8 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
                                             TNode fact,
                                             bool isInternal)
 {
-  std::cout << "notifyFact: " << atom << "\n";
+  // std::cout << "notifyFact: " << atom << "\n";
+  Trace("gor::solver") << "notifyFact: " << atom << "\n";
 
   if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && pol) {
     TNode var0 = atom[0];
@@ -259,7 +280,8 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
 bool TheoryGenericOrderRelation::collectModelValues(
     TheoryModel* m, const std::set<Node>& termSet)
 {
-  std::cout << "collectModelValues\n";
+  // std::cout << "collectModelValues\n";
+  Trace("gor::solver") << "collectModelValues\n";
   // PART OF THE FAILED ATTEMPTS TO ADD THE gor PAIRS TO THE MODEL AS A SINGLE NODE OR AS A COMMENT ---
   // SkolemManager* sm = nodeManager()->getSkolemManager();
   // RepSet* repset = m->getRepSetPtr();
@@ -267,7 +289,8 @@ bool TheoryGenericOrderRelation::collectModelValues(
 
   for (const auto& [type, gorMat] : d_matMap) {
     if (!gorMat.d_gorPairs.empty()) {
-      std::cout << "gor pairs for type \'" << type << "\': " << gorMat.d_gorPairs << "\n";
+      Trace("gor::solver") << "gor pairs for type \'" << type << "\': " << gorMat.d_gorPairs << "\n";
+      Trace("gor::model") << "gor pairs for type \'" << type << "\': " << gorMat.d_gorPairs << "\n";
 
       // SOME FAILED ATTEMPTS TO ADD THE gor PAIRS TO THE MODEL AS A SINGLE NODE OR AS A COMMENT ---
 
@@ -292,13 +315,79 @@ bool TheoryGenericOrderRelation::collectModelValues(
 }
 
 void TheoryGenericOrderRelation::computeCareGraph() {
-  std::cout << "computeGraph\n";
+  Trace("gor::solver") << "computeGraph\n";
 }
 
-TrustNode TheoryGenericOrderRelation::explain(TNode) {
-  std::cout << "explain\n";
-  return TrustNode();
+TrustNode TheoryGenericOrderRelation::explain(TNode lit) {
+  Trace("gor::solver") << "explain: " << lit << std::endl;
+  
+  NodeManager* nm = nodeManager();
+  
+  // // Build an explanation based on the transitive path
+  // // For now, return the literal itself as explanation
+  // if (lit.getKind() == Kind::NOT && 
+  //     lit[0].getKind() == Kind::GENERIC_SMALLER_THAN) {
+  //   // Explaining (not (gor x y))
+  //   return TrustNode::mkTrustPropExp(lit, lit, nullptr);
+  // }
+  // else if (lit.getKind() == Kind::GENERIC_SMALLER_THAN) {
+  //   // Explaining (gor x y) - should be from asserted facts
+  //   return TrustNode::mkTrustPropExp(lit, lit, nullptr);
+  // }
+  
+  // Default
+  Node trueNode = nm->mkConst<bool>(true);
+  return TrustNode::mkTrustLemma(trueNode, nullptr);
 }
+
+
+
+// TrustNode TheoryGenericOrderRelation::explain(TNode fact)
+// {
+//   // Ensure we use the internal namespace types explicitly to avoid overload ambiguity
+//   using cvc5::internal::TrustNode;
+//   using cvc5::internal::Node;
+//   using cvc5::internal::TNode;
+//   using cvc5::internal::ProofGenerator;
+//   using cvc5::internal::NodeManager;
+
+//   NodeManager* nm = nodeManager();
+
+//   // Defensive: if fact is null, return a trivial proven explanation
+//   if (fact.isNull())
+//   {
+//     Node trueNode = nm->mkConst<bool>(true);
+//     return TrustNode::mkTrustPropExp(TNode(trueNode), trueNode,
+//                                      static_cast<ProofGenerator*>(nullptr));
+//   }
+
+//   // The mkTrustPropExp signature we must satisfy is:
+//   // mkTrustPropExp(TNode lit, Node exp, ProofGenerator* pg = nullptr)
+//   // - lit: the literal being explained (TNode)
+//   // - exp: a Node that implies lit
+//   //
+//   // Ensure the "lit" is a Boolean (literal). If fact is not boolean, create
+//   // an equality fact == fact as a trivial boolean explanation.
+//   TNode lit = fact;
+//   Node exp;
+
+//   if (lit.getType().isBoolean())
+//   {
+//     exp = Node(lit); // explanation is the literal itself
+//   }
+//   else
+//   {
+//     // make a trivially true boolean that mentions the term:
+//     // (fact = fact) is boolean and implies nothing but keeps proven shape
+//     exp = nm->mkNode(Kind::EQUAL, Node(lit), Node(lit));
+//     // also make lit the boolean equality so the engine sees proven[1] == lit
+//     lit = TNode(exp);
+//   }
+
+//   // Finally, build the TrustNode with an explicit cast for the proof generator arg
+//   return TrustNode::mkTrustPropExp(lit, exp, static_cast<ProofGenerator*>(nullptr));
+// }
+
 
 // Node TheoryGenericOrderRelation::getModelValue(TNode) { 
 //     return Node();
@@ -306,7 +395,8 @@ TrustNode TheoryGenericOrderRelation::explain(TNode) {
 
 
 void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
-  std::cout << "preRegister: " << node << " : " << node.getKind() << "\n";
+  // std::cout << "preRegister: " << node << " : " << node.getKind() << "\n";
+  Trace("gor::solver") << "preRegister: " << node << " : " << node.getKind() << "\n";
   // Insert both arguments of the gor operator to d_matMap field of the correspond type.
   if (node.getKind() == Kind::GENERIC_SMALLER_THAN) {
     for (size_t i=0; i<2; i++) {
@@ -315,7 +405,7 @@ void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
         d_matMap[nK] = GorMat();
       }
       if (d_matMap[nK].d_gorExpMap.find(node[i]) == d_matMap[nK].d_gorExpMap.end()) {
-        std::cout << "preRegister found: " << node[i] << " : " << node[i].getKind() << "\n";
+        Trace("gor::solver") << "preRegister found: " << node[i] << " : " << node[i].getKind() << "\n";
         d_matMap[nK].d_gorExpMap[node[i]] = d_matMap[nK].d_numExps;
         d_matMap[nK].d_numExps++;
       }
@@ -348,7 +438,7 @@ TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
 // }
 
 void TheoryGenericOrderRelation::presolve() {
-  std::cout << "preSolve\n";
+  Trace("gor::solver") << "preSolve\n";
 
   for (auto& [type, gorMat] : d_matMap){
     // Initialize adjacency matrix for each kind.
@@ -360,7 +450,7 @@ void TheoryGenericOrderRelation::presolve() {
 }
 
 bool TheoryGenericOrderRelation::isEntailed(Node n, bool pol) {
-  std::cout << "isEntailed\n";
+  Trace("gor::solver") << "isEntailed\n";
   return false; 
 }
 
