@@ -21,11 +21,39 @@ namespace cvc5::internal {
 namespace theory {
 namespace gor {
 
-bool GorMat::isHasCycle() {
-  // Initiate reachable mat such (after finishing build it) reachable[i][j] == true iff there's a path from i to j.
+std::pair<bool, std::vector<TNode>> GorMat::isHasCycle() {
+  // Initiate reachable mat such (after finishing build it) reachable[i][j].first == true iff there's a path from i to j.
+  // and reachable[i][j].second contains one such path as a vector of TNodes.
   // In order to build it, the method uses Floyd-Warshall algorithm.
-  std::vector<std::vector<bool>> reachable = d_matrix;  
+  std::vector<std::vector<std::pair<bool, std::vector<TNode>>>> reachable;  
   size_t numVars = d_numExps;
+
+  // Initialize reachable as a copy of d_matrix in the first component of the pair, and empty vector in the second component.
+  for (size_t i = 0; i < numVars; ++i)
+  {
+    reachable.emplace_back();
+    for (size_t j = 0; j < numVars; ++j)
+    {
+      if (i == j) {
+        reachable[i].emplace_back(false, std::vector<TNode>{});
+        continue;
+      }
+      if (d_matrix[i][j]) {
+        TNode exp_i = std::find_if(d_gorExpMap.begin(), d_gorExpMap.end(), 
+        [i](const std::pair<TNode, size_t>& pair) {
+            return pair.second == i;
+        })->first;
+        TNode exp_j = std::find_if(d_gorExpMap.begin(), d_gorExpMap.end(), 
+        [j](const std::pair<TNode, size_t>& pair) {
+            return pair.second == j;
+        })->first;
+        reachable[i].emplace_back(d_matrix[i][j], std::vector<TNode>{exp_i, exp_j});
+      }
+      else {
+        reachable[i].emplace_back(d_matrix[i][j], std::vector<TNode>{});
+      }
+    }
+  }
 
   // Floyd-Warshall: closure over paths
   for (size_t k = 0; k < numVars; ++k)
@@ -34,9 +62,16 @@ bool GorMat::isHasCycle() {
     {
       for (size_t j = 0; j < numVars; ++j)
       {
-        if (!reachable[i][j])
+        if (!reachable[i][j].first)
         {
-          reachable[i][j] = reachable[i][k] && reachable[k][j];
+          reachable[i][j].first = reachable[i][k].first && reachable[k][j].first;
+          if (reachable[i][j].first) {
+            // Update the path info if a path from i to j is found
+            reachable[i][j].second = reachable[i][k].second;
+            reachable[i][j].second.insert(reachable[i][j].second.end(),
+                                          reachable[k][j].second.begin(),
+                                          reachable[k][j].second.end());
+          }
         }
       }
     }
@@ -44,13 +79,13 @@ bool GorMat::isHasCycle() {
 
   // Check if there's a cycle in the graph by checking if there's an node that has a path to itself
   for (size_t i = 0; i < numVars; ++i) {
-    if (reachable[i][i]) {
-      return true;
+    if (reachable[i][i].first) {
+      return reachable[i][i];
     }
   }
 
   // Return false in case there's no node with path to itself.
-  return false; 
+  return std::make_pair(false, std::vector<TNode>{});
 }
 
 void GorMat::computeReachableMatrix() {
@@ -187,31 +222,101 @@ void TheoryGenericOrderRelation::postCheck(Effort level) {
     // --- PRINTS ---
 
     // check if there's a cycle in the graph which causes a conflict
-    if (gorMat.isHasCycle()) {
+    std::pair<bool, std::vector<TNode>> cycleResult = gorMat.isHasCycle();
+    if (cycleResult.first) {
       // std::cout << "CONFLICT: cycle detected\n";
       Trace("gor::solver") << "CONFLICT: cycle detected\n";
-      Node n = nodeManager()->mkConst<bool>(false);
-      Node lit = nodeManager()->mkNode(Kind::GENERIC_SMALLER_THAN, n, n);
-      Node conflict = lit;
+      // send the cycle path as a conflict (and between the cycle edges)
+      Node conflict;
+      if (cycleResult.second.size() == 1) {        
+        conflict = cycleResult.second[0];      
+      } 
+      else {
+        NodeManager* nm = nodeManager();
+        Node newLit = nm->mkNode(Kind::GENERIC_SMALLER_THAN, cycleResult.second[0], cycleResult.second[1]);
+        for (size_t i = 2; i < cycleResult.second.size(); ++i) {
+          Node s = cycleResult.second[i++];
+          Node b = cycleResult.second[i];
+          newLit = nm->mkNode(Kind::AND, newLit, nm->mkNode(Kind::GENERIC_SMALLER_THAN, s, b));
+        }
+        conflict = newLit;
+        Trace("gor::solver") << "Conflict cycle literals: " << conflict << std::endl;
+      }
       d_im.conflict(conflict, InferenceId::GOR_LEMMA);
-      // std::cout << "after conflict\n";
       return;
     }
     // check if the graph contains a forbidden path
     std::optional<std::pair<TNode, TNode>> pair = gorMat.containForbiddenPath();
     if (pair) {
       Trace("gor::solver") << "CONFLICT: " << pair ->first << " -> " << pair ->second << "\n";
-      // Node conflict = nodeManager()->mkConst<bool>(false);
-      // d_im.conflict(conflict, InferenceId::GOR_LEMMA);
-      Node n = nodeManager()->mkConst<bool>(false);
-      Node lit = nodeManager()->mkNode(Kind::GENERIC_SMALLER_THAN, n, n);
-      Node conflict = nodeManager()->mkNode(Kind::NOT, lit);
+      std::vector<TNode> pathLiterals = computeForbiddenPath(gorMat, &(*pair));
+      Node conflict = nodeManager()->mkNode(Kind::AND, pathLiterals);
       d_im.conflict(conflict, InferenceId::GOR_LEMMA);
-    } 
+      return;
+    }
 
     enforceDisequalities(gorMat, type);
   }
 
+}
+
+// Single Source Shortest Path from source to all other nodes in gorMat, returns the father nodes vector
+std::vector<TNode> SSSP(GorMat& gorMat, TNode source) {
+  std::vector<TNode> fatherNodes(gorMat.d_numExps, TNode::null());
+  std::queue<TNode> toVisit;
+  toVisit.push(source);
+
+  while (!toVisit.empty()) {
+    TNode current = toVisit.front();
+    size_t current_idx = gorMat.d_gorExpMap[current];
+    toVisit.pop();
+    for (const auto& [node, idx] : gorMat.d_gorExpMap) {
+      if (gorMat.d_matrix[current_idx][idx] && fatherNodes[idx] == TNode::null()) {
+        fatherNodes[idx] = current;
+        toVisit.push(node);
+      }
+    }
+  }
+  return fatherNodes;
+}
+
+std::vector<TNode> TheoryGenericOrderRelation::computeForbiddenPath(GorMat& gorMat, std::pair<TNode, TNode>* pair) {      
+      // Build conflict: the forbidden edge + the path that exists
+      TNode forbiddenEdge = nodeManager()->mkNode(Kind::GENERIC_SMALLER_THAN, pair->first, pair->second);
+      TNode notForbiddenEdge = nodeManager()->mkNode(Kind::NOT, forbiddenEdge);
+      
+      // Collect edges forming the path from pair->first to pair->second
+      std::vector<TNode> pathLiterals;
+      pathLiterals.push_back(notForbiddenEdge);
+      
+      // Add edges that form the forbidden path
+      TNode source = pair->first;
+      TNode destination = pair->second;
+      std::vector<TNode> fatherNodes = SSSP(gorMat, source);
+
+      // Reconstruct path
+      TNode pathNode = destination;
+      std::vector<TNode> reversePath;
+      while (pathNode != source) {
+        reversePath.push_back(pathNode);
+        pathNode = fatherNodes[gorMat.d_gorExpMap[pathNode]];
+      }
+      reversePath.push_back(source);
+      std::reverse(reversePath.begin(), reversePath.end());
+      // Build path literals
+      for (size_t i = 0; i < reversePath.size() - 1; ++i) {
+        Node lit = nodeManager()->mkNode(Kind::GENERIC_SMALLER_THAN, 
+                                          reversePath[i], reversePath[i+1]);
+        pathLiterals.push_back(lit);
+      }
+      return pathLiterals;
+
+      std::cout << "Forbidden path literals: ";
+      for (const auto& lit : pathLiterals) {
+        std::cout << lit << " ";
+      }
+      std::cout << std::endl;
+      return pathLiterals;
 }
 
 void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat, TypeNode type) {
@@ -219,6 +324,7 @@ void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat, TypeNode t
 
   // enforce for each (i,j) with d_reachableMatrix[i][j] == true, exp_i != exp_j as a lemma during solving
   for (const auto& [exp_i, i] : gorMat.d_gorExpMap) {
+    std::vector<TNode> fatherNodes = SSSP(gorMat, exp_i);
     for (const auto& [exp_j, j] : gorMat.d_gorExpMap) {
       if (gorMat.d_reachableMatrix[i][j] && i != j)
       {
@@ -226,7 +332,40 @@ void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat, TypeNode t
         Trace("gor::solver") << "ENFORCE DISEQUALITY: " << exp_i << " != " << exp_j << "\n";
         Node diseq = nodeManager()->mkNode(Kind::NOT, 
                           nodeManager()->mkNode(Kind::EQUAL, exp_i, exp_j));
-        d_im.lemma(diseq, InferenceId::GOR_LEMMA);
+
+        
+        std::vector<TNode> pathLiterals;
+        if (!gorMat.d_matrix[i][j]) {
+          // construct the path from exp_i to exp_j which will be used as the reason for the lemma
+          // Reconstruct path
+          TNode pathNode = exp_j;
+          std::vector<TNode> reversePath;
+          while (pathNode != exp_i) {
+            reversePath.push_back(pathNode);
+            pathNode = fatherNodes[gorMat.d_gorExpMap[pathNode]];
+          }
+          reversePath.push_back(exp_i);
+          std::reverse(reversePath.begin(), reversePath.end());
+          // Build path literals
+          for (size_t k = 0; k < reversePath.size() - 1; ++k) {
+            Node lit = nodeManager()->mkNode(Kind::GENERIC_SMALLER_THAN, 
+                                              reversePath[k], reversePath[k+1]);
+            pathLiterals.push_back(lit);
+          }
+        }
+
+        // submit the lemma
+        Node reason;
+        if (gorMat.d_matrix[i][j]) {
+          // direct edge exists, define reason as this edge
+          reason = nodeManager()->mkNode(Kind::GENERIC_SMALLER_THAN, exp_i, exp_j);
+        }
+        else {
+          // direct edge doesn't exist, define reason as the path from exp_i to exp_j
+          reason = nodeManager()->mkNode(Kind::AND, pathLiterals);
+        }
+        Node lemma = nodeManager()->mkNode(Kind::IMPLIES, reason, diseq);
+        d_im.lemma(lemma, InferenceId::GOR_LEMMA);
 
         // Store the pair (exp_i, exp_j) in d_gorPairs field
         Node pairNode = nodeManager()->mkNode(Kind::SEXPR,
@@ -320,73 +459,13 @@ void TheoryGenericOrderRelation::computeCareGraph() {
 
 TrustNode TheoryGenericOrderRelation::explain(TNode lit) {
   Trace("gor::solver") << "explain: " << lit << std::endl;
+  std::cout << "explain: " << lit << std::endl;
   
-  NodeManager* nm = nodeManager();
-  
-  // // Build an explanation based on the transitive path
-  // // For now, return the literal itself as explanation
-  // if (lit.getKind() == Kind::NOT && 
-  //     lit[0].getKind() == Kind::GENERIC_SMALLER_THAN) {
-  //   // Explaining (not (gor x y))
-  //   return TrustNode::mkTrustPropExp(lit, lit, nullptr);
-  // }
-  // else if (lit.getKind() == Kind::GENERIC_SMALLER_THAN) {
-  //   // Explaining (gor x y) - should be from asserted facts
-  //   return TrustNode::mkTrustPropExp(lit, lit, nullptr);
-  // }
-  
-  // Default
-  Node trueNode = nm->mkConst<bool>(true);
-  return TrustNode::mkTrustLemma(trueNode, nullptr);
+  // Default: shouldn't reach here
+  Trace("gor::solver") << "Warning: unexpected literal in explain: " << lit << std::endl;
+  return TrustNode::mkTrustPropExp(lit, lit, nullptr);
 }
 
-
-
-// TrustNode TheoryGenericOrderRelation::explain(TNode fact)
-// {
-//   // Ensure we use the internal namespace types explicitly to avoid overload ambiguity
-//   using cvc5::internal::TrustNode;
-//   using cvc5::internal::Node;
-//   using cvc5::internal::TNode;
-//   using cvc5::internal::ProofGenerator;
-//   using cvc5::internal::NodeManager;
-
-//   NodeManager* nm = nodeManager();
-
-//   // Defensive: if fact is null, return a trivial proven explanation
-//   if (fact.isNull())
-//   {
-//     Node trueNode = nm->mkConst<bool>(true);
-//     return TrustNode::mkTrustPropExp(TNode(trueNode), trueNode,
-//                                      static_cast<ProofGenerator*>(nullptr));
-//   }
-
-//   // The mkTrustPropExp signature we must satisfy is:
-//   // mkTrustPropExp(TNode lit, Node exp, ProofGenerator* pg = nullptr)
-//   // - lit: the literal being explained (TNode)
-//   // - exp: a Node that implies lit
-//   //
-//   // Ensure the "lit" is a Boolean (literal). If fact is not boolean, create
-//   // an equality fact == fact as a trivial boolean explanation.
-//   TNode lit = fact;
-//   Node exp;
-
-//   if (lit.getType().isBoolean())
-//   {
-//     exp = Node(lit); // explanation is the literal itself
-//   }
-//   else
-//   {
-//     // make a trivially true boolean that mentions the term:
-//     // (fact = fact) is boolean and implies nothing but keeps proven shape
-//     exp = nm->mkNode(Kind::EQUAL, Node(lit), Node(lit));
-//     // also make lit the boolean equality so the engine sees proven[1] == lit
-//     lit = TNode(exp);
-//   }
-
-//   // Finally, build the TrustNode with an explicit cast for the proof generator arg
-//   return TrustNode::mkTrustPropExp(lit, exp, static_cast<ProofGenerator*>(nullptr));
-// }
 
 
 // Node TheoryGenericOrderRelation::getModelValue(TNode) { 

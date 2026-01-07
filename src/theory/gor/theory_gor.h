@@ -44,8 +44,8 @@ class GorMat {
 
   GorMat() {d_numExps = 0;}
 
-  // Check if the graph contain a cycle
-  bool isHasCycle();
+  // Check if the graph contain a cycle, and if yes, return also one cycle path
+  std::pair<bool, std::vector<TNode>> isHasCycle();
 
   // Check if the graph contain forbidden path
   std::optional<std::pair<TNode, TNode>> containForbiddenPath();
@@ -123,6 +123,8 @@ class TheoryGenericOrderRelation : public Theory
 
   // enforce for each (i,j) with d_reachableMatrix[i][j] == true, exp_i != exp_j as a lemma during solving
   void enforceDisequalities(GorMat& gorMat, TypeNode type);
+
+  std::vector<TNode> computeForbiddenPath(GorMat& gorMat, std::pair<TNode, TNode>* pair);
 
 }; /* class TheoryGenericOrderRelation */
 
