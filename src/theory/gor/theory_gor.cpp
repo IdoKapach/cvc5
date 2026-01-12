@@ -395,6 +395,11 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
   if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && pol) {
     TNode var0 = atom[0];
     TNode var1 = atom[1];
+    // If the arguments are syntactically equal, the atom must be false (irreflexivity)
+    if (var0 == var1) {
+      d_im.conflict(atom, InferenceId::GOR_LEMMA);
+      return;
+    }
     TypeNode k = var0.getType();
     d_matMap[k].d_matrix[d_matMap[k].d_gorExpMap[var0]][d_matMap[k].d_gorExpMap[var1]] = true;
   }
@@ -419,34 +424,88 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
 bool TheoryGenericOrderRelation::collectModelValues(
     TheoryModel* m, const std::set<Node>& termSet)
 {
-  // std::cout << "collectModelValues\n";
-  Trace("gor::solver") << "collectModelValues\n";
-  // PART OF THE FAILED ATTEMPTS TO ADD THE gor PAIRS TO THE MODEL AS A SINGLE NODE OR AS A COMMENT ---
-  // SkolemManager* sm = nodeManager()->getSkolemManager();
-  // RepSet* repset = m->getRepSetPtr();
-  // repset->d_type_reps[nodeManager() -> stringType()];
+  // Trace("gor::solver") << "collectModelValues called with " << termSet.size() << " terms\n";
+  // NodeManager* nm = nodeManager();
 
+  // // First, ensure reachability matrices are computed for all types
+  // for (auto& [type, gorMat] : d_matMap) {
+  //   if (gorMat.d_reachableMatrix.empty() && !gorMat.d_matrix.empty()) {
+  //     gorMat.computeReachableMatrix();
+  //   }
+  // }
+
+  // for (const Node& term : termSet) {
+  //   Trace("gor::solver") << "  Term in termSet: " << term << " kind: " << term.getKind() << std::endl;
+    
+    // if (term.getKind() == Kind::GENERIC_SMALLER_THAN) {
+    //   TNode arg0 = term[0];
+    //   TNode arg1 = term[1];
+    //   TypeNode type = arg0.getType();
+      
+    //   bool isTrue = true;
+      
+    //   // If the arguments are syntactically equal, gor.< must be false (irreflexivity)
+    //   if (arg0 == arg1) {
+    //     isTrue = false;
+    //     Trace("gor::solver") << "  Same arguments -> false" << std::endl;
+    //   }
+    //   // Check if they're equal in the equality engine
+    //   else if (d_equalityEngine->hasTerm(arg0) && 
+    //            d_equalityEngine->hasTerm(arg1) &&
+    //            d_equalityEngine->areEqual(arg0, arg1)) {
+    //     isTrue = false;
+    //     Trace("gor::solver") << "  Equal in EE -> false. they both have the value:" << d_equalityEngine->getRepresentative(arg0) << std::endl;
+    //   }
+    //   else if (d_matMap.find(type) != d_matMap.end()) {
+    //     GorMat& gorMat = d_matMap[type];
+    //     auto it0 = gorMat.d_gorExpMap.find(arg0);
+    //     auto it1 = gorMat.d_gorExpMap.find(arg1);
+        
+    //     if (it0 != gorMat.d_gorExpMap.end() && it1 != gorMat.d_gorExpMap.end()) {
+    //       size_t idx0 = it0->second;
+    //       size_t idx1 = it1->second;
+          
+    //       Trace("gor::solver") << "  Indices: " << idx0 << ", " << idx1 << std::endl;
+          
+    //       // Use reachability matrix (includes transitive closure)
+    //       if (!gorMat.d_reachableMatrix.empty() && 
+    //           idx0 < gorMat.d_reachableMatrix.size() && 
+    //           idx1 < gorMat.d_reachableMatrix[idx0].size()) {
+    //         isTrue = !gorMat.d_reachableMatrix[idx1][idx0];
+    //         Trace("gor::solver") << "  From reachability matrix: " << isTrue << std::endl;
+    //       }
+    //       // Fallback to direct edge
+    //       else if (idx0 < gorMat.d_matrix.size() && 
+    //                idx1 < gorMat.d_matrix[idx0].size()) {
+    //         isTrue = !gorMat.d_matrix[idx1][idx0];
+    //         Trace("gor::solver") << "  From direct matrix: " << isTrue << std::endl;
+    //       }
+    //     }
+    //     else {
+    //       Trace("gor::solver") << "  Args not found in gorExpMap" << std::endl;
+    //       // If args aren't tracked, default to false
+    //       isTrue = false;
+    //     }
+    //   }
+    //   else {
+    //     Trace("gor::solver") << "  Type not found in d_matMap" << std::endl;
+    //     isTrue = false;
+    //   }
+      
+    //   Node boolVal = nm->mkConst(isTrue);
+    //   Trace("gor::solver") << "  Final assignment: " << term << " = " << boolVal << std::endl;
+      
+    //   if (!m->assertEquality(term, boolVal, true)) {
+    //     Trace("gor::solver") << "  FAILED to assert equality!" << std::endl;
+    //     return false;
+    //   }
+    // }
+  // }
+
+  // Log the gor pairs for debugging
   for (const auto& [type, gorMat] : d_matMap) {
     if (!gorMat.d_gorPairs.empty()) {
-      Trace("gor::solver") << "gor pairs for type \'" << type << "\': " << gorMat.d_gorPairs << "\n";
-      Trace("gor::model") << "gor pairs for type \'" << type << "\': " << gorMat.d_gorPairs << "\n";
-
-      // SOME FAILED ATTEMPTS TO ADD THE gor PAIRS TO THE MODEL AS A SINGLE NODE OR AS A COMMENT ---
-
-      // std::stringstream varName;
-      // varName << "gor_pairs_<" << type << ">";
-      // TypeNode sexprType = nodeManager()->mkAbstractType(Kind::ABSTRACT_TYPE);
-      // Node sym = nodeManager()->getSkolemManager()->mkDummySkolem(varName.str(), gorMat.d_gorPairs.getType(),"GOR list of pairs (syntactic only)");
-      // m->getEqualityEngine()->addTerm(sym);
-      // m->assertEquality(sym, sym, true);
-
-      // if (!m->assertEquality(sym, gorMat.d_gorPairs, true)) {
-      //   return false;
-      // }
-
-      // Node n = nodeManager()->mkConst(String(gorMat.d_gorPairs.toString()));
-      // repset->add(n.getType(), n);
-      // repset -> toStream(std::cout);      
+      Trace("gor::model") << "gor pairs for type '" << type << "': " << gorMat.d_gorPairs << "\n";
     }
   }
   
