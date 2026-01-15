@@ -1,0 +1,24 @@
+# kinds.toml
+#
+# Generic Order Relation (GOR) Theory
+# Follows structure similar to Finite Fields
+#
+
+[theory]
+id                 = "THEORY_GOR"
+base_class         = "::cvc5::internal::theory::gor::TheoryGenericOrderRelation"
+base_class_header  = "theory/gor/theory_gor.h"
+properties         = ["check", "presolve"]
+typechecker_header = "theory/gor/theory_gor_type_rules.h"
+
+[rewriter]
+class  = "::cvc5::internal::theory::gor::TheoryGenericOrderRelationRewriter"
+header = "theory/gor/theory_gor_rewriter.h"
+
+[[kinds]]
+type     = "operator"
+name     = "GENERIC_SMALLER_THAN"
+children = 2
+comment  = "Smaller-than that supports all types (as long as both arguments are the same type)"
+typerule = "::cvc5::internal::theory::gor::GenericSmallerThanTypeRule"
+
