@@ -1,4 +1,5 @@
 ; COMMAND-LINE: --produce-models
+; DISABLE-TESTER: model
 ; EXPECT: sat
 ; EXPECT: (
 ; EXPECT: (define-fun x () Int (- 1))

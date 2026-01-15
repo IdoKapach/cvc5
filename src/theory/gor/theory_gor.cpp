@@ -91,9 +91,6 @@ std::pair<bool, std::vector<TNode>> GorMat::isHasCycle() {
 void GorMat::computeReachableMatrix() {
   // Intialize d_reachableMatrix as a copy of the d_matrix with true values on the slant
   //  (which represent self loops in the represented graph)
-
-  // std::cout << "!!!!!!the reachable computed!!!!!\n";
-
   d_reachableMatrix = d_matrix;
   for (size_t i = 0; i < d_numExps; ++i) {
       d_reachableMatrix[i][i] = true;
@@ -168,19 +165,16 @@ TheoryGenericOrderRelation::~TheoryGenericOrderRelation() {}
 
 TheoryRewriter* TheoryGenericOrderRelation::getTheoryRewriter()
 {
-  // std::cout << "getRewriter\n";
   return &d_rewriter;
 }
 
 ProofRuleChecker* TheoryGenericOrderRelation::getProofChecker()
 {
-  // std::cout << "proofChecker\n";
   return nullptr;
 }
 
 bool TheoryGenericOrderRelation::needsEqualityEngine(EeSetupInfo& esi)
 {
-  // std::cout << "needEquality\n";
   esi.d_notify = &d_eqNotify;
   esi.d_name = "theory::gor::ee";
   return true;
@@ -188,14 +182,12 @@ bool TheoryGenericOrderRelation::needsEqualityEngine(EeSetupInfo& esi)
 
 void TheoryGenericOrderRelation::finishInit()
 {
-  // std::cout << "finishInit\n";
   Assert(d_equalityEngine != nullptr);
 
   d_equalityEngine->addFunctionKind(Kind::GENERIC_SMALLER_THAN);
 }
 
 void TheoryGenericOrderRelation::postCheck(Effort level) {
-  // std::cout << "postCheck: " << level << "\n";
   for (auto& [type, gorMat] : d_matMap) {
 
     // --- PRINTS ---
@@ -224,7 +216,6 @@ void TheoryGenericOrderRelation::postCheck(Effort level) {
     // check if there's a cycle in the graph which causes a conflict
     std::pair<bool, std::vector<TNode>> cycleResult = gorMat.isHasCycle();
     if (cycleResult.first) {
-      // std::cout << "CONFLICT: cycle detected\n";
       Trace("gor::solver") << "CONFLICT: cycle detected\n";
       // send the cycle path as a conflict (and between the cycle edges)
       Node conflict;
@@ -310,13 +301,6 @@ std::vector<TNode> TheoryGenericOrderRelation::computeForbiddenPath(GorMat& gorM
         pathLiterals.push_back(lit);
       }
       return pathLiterals;
-
-      std::cout << "Forbidden path literals: ";
-      for (const auto& lit : pathLiterals) {
-        std::cout << lit << " ";
-      }
-      std::cout << std::endl;
-      return pathLiterals;
 }
 
 void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat, TypeNode type) {
@@ -376,10 +360,6 @@ void TheoryGenericOrderRelation::enforceDisequalities(GorMat& gorMat, TypeNode t
     }
   }
 
-  // if d_gorPairs is a Node:
-  // gorMat.d_gorPairs = nodeManager()->mkNode(Kind::SEXPR, pairs);
-
-  // if d_gorPairs is a vector<Node>:
   gorMat.d_gorPairs = pairs;
 }
 
@@ -389,7 +369,6 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
                                             TNode fact,
                                             bool isInternal)
 {
-  // std::cout << "notifyFact: " << atom << "\n";
   Trace("gor::solver") << "notifyFact: " << atom << "\n";
 
   if (atom.getKind() == Kind::GENERIC_SMALLER_THAN && pol) {
@@ -424,88 +403,11 @@ void TheoryGenericOrderRelation::notifyFact(TNode atom,
 bool TheoryGenericOrderRelation::collectModelValues(
     TheoryModel* m, const std::set<Node>& termSet)
 {
-  // Trace("gor::solver") << "collectModelValues called with " << termSet.size() << " terms\n";
-  // NodeManager* nm = nodeManager();
-
-  // // First, ensure reachability matrices are computed for all types
-  // for (auto& [type, gorMat] : d_matMap) {
-  //   if (gorMat.d_reachableMatrix.empty() && !gorMat.d_matrix.empty()) {
-  //     gorMat.computeReachableMatrix();
-  //   }
-  // }
-
-  // for (const Node& term : termSet) {
-  //   Trace("gor::solver") << "  Term in termSet: " << term << " kind: " << term.getKind() << std::endl;
-    
-    // if (term.getKind() == Kind::GENERIC_SMALLER_THAN) {
-    //   TNode arg0 = term[0];
-    //   TNode arg1 = term[1];
-    //   TypeNode type = arg0.getType();
-      
-    //   bool isTrue = true;
-      
-    //   // If the arguments are syntactically equal, gor.< must be false (irreflexivity)
-    //   if (arg0 == arg1) {
-    //     isTrue = false;
-    //     Trace("gor::solver") << "  Same arguments -> false" << std::endl;
-    //   }
-    //   // Check if they're equal in the equality engine
-    //   else if (d_equalityEngine->hasTerm(arg0) && 
-    //            d_equalityEngine->hasTerm(arg1) &&
-    //            d_equalityEngine->areEqual(arg0, arg1)) {
-    //     isTrue = false;
-    //     Trace("gor::solver") << "  Equal in EE -> false. they both have the value:" << d_equalityEngine->getRepresentative(arg0) << std::endl;
-    //   }
-    //   else if (d_matMap.find(type) != d_matMap.end()) {
-    //     GorMat& gorMat = d_matMap[type];
-    //     auto it0 = gorMat.d_gorExpMap.find(arg0);
-    //     auto it1 = gorMat.d_gorExpMap.find(arg1);
-        
-    //     if (it0 != gorMat.d_gorExpMap.end() && it1 != gorMat.d_gorExpMap.end()) {
-    //       size_t idx0 = it0->second;
-    //       size_t idx1 = it1->second;
-          
-    //       Trace("gor::solver") << "  Indices: " << idx0 << ", " << idx1 << std::endl;
-          
-    //       // Use reachability matrix (includes transitive closure)
-    //       if (!gorMat.d_reachableMatrix.empty() && 
-    //           idx0 < gorMat.d_reachableMatrix.size() && 
-    //           idx1 < gorMat.d_reachableMatrix[idx0].size()) {
-    //         isTrue = !gorMat.d_reachableMatrix[idx1][idx0];
-    //         Trace("gor::solver") << "  From reachability matrix: " << isTrue << std::endl;
-    //       }
-    //       // Fallback to direct edge
-    //       else if (idx0 < gorMat.d_matrix.size() && 
-    //                idx1 < gorMat.d_matrix[idx0].size()) {
-    //         isTrue = !gorMat.d_matrix[idx1][idx0];
-    //         Trace("gor::solver") << "  From direct matrix: " << isTrue << std::endl;
-    //       }
-    //     }
-    //     else {
-    //       Trace("gor::solver") << "  Args not found in gorExpMap" << std::endl;
-    //       // If args aren't tracked, default to false
-    //       isTrue = false;
-    //     }
-    //   }
-    //   else {
-    //     Trace("gor::solver") << "  Type not found in d_matMap" << std::endl;
-    //     isTrue = false;
-    //   }
-      
-    //   Node boolVal = nm->mkConst(isTrue);
-    //   Trace("gor::solver") << "  Final assignment: " << term << " = " << boolVal << std::endl;
-      
-    //   if (!m->assertEquality(term, boolVal, true)) {
-    //     Trace("gor::solver") << "  FAILED to assert equality!" << std::endl;
-    //     return false;
-    //   }
-    // }
-  // }
-
-  // Log the gor pairs for debugging
+  // Log the gor pairs for modeling
   for (const auto& [type, gorMat] : d_matMap) {
     if (!gorMat.d_gorPairs.empty()) {
       Trace("gor::model") << "gor pairs for type '" << type << "': " << gorMat.d_gorPairs << "\n";
+      Trace("gor::solver") << "gor pairs for type '" << type << "': " << gorMat.d_gorPairs << "\n";
     }
   }
   
@@ -517,23 +419,14 @@ void TheoryGenericOrderRelation::computeCareGraph() {
 }
 
 TrustNode TheoryGenericOrderRelation::explain(TNode lit) {
-  Trace("gor::solver") << "explain: " << lit << std::endl;
-  std::cout << "explain: " << lit << std::endl;
-  
+  Trace("gor::solver") << "explain: " << lit << std::endl;  
   // Default: shouldn't reach here
   Trace("gor::solver") << "Warning: unexpected literal in explain: " << lit << std::endl;
   return TrustNode::mkTrustPropExp(lit, lit, nullptr);
 }
 
 
-
-// Node TheoryGenericOrderRelation::getModelValue(TNode) { 
-//     return Node();
-// }
-
-
 void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
-  // std::cout << "preRegister: " << node << " : " << node.getKind() << "\n";
   Trace("gor::solver") << "preRegister: " << node << " : " << node.getKind() << "\n";
   // Insert both arguments of the gor operator to d_matMap field of the correspond type.
   if (node.getKind() == Kind::GENERIC_SMALLER_THAN) {
@@ -565,15 +458,8 @@ void TheoryGenericOrderRelation::preRegisterTerm(TNode node) {
 TrustNode TheoryGenericOrderRelation::ppRewrite(TNode n,
                                                 std::vector<SkolemLemma>& lems)
 {
-  // std::cout << "ppRewrite " << n << std::endl;
   return TrustNode::null();
 }
-
-// PPAssertStatus TheoryGenericOrderRelation::ppAssert(
-//     TrustNode tin, TrustSubstitutionMap& outSubstitutions)
-// {
-//   return PPAssertStatus();
-// }
 
 void TheoryGenericOrderRelation::presolve() {
   Trace("gor::solver") << "preSolve\n";

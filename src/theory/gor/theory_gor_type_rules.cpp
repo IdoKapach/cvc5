@@ -15,12 +15,13 @@ TypeNode GenericSmallerThanTypeRule::computeType(NodeManager* nodeManager,
                                                  bool check,
                                                  std::ostream* errOut)
 {
-  // std::cout << "typeRule: " << n << "\n";
+  // enforce the number of arguments for gor.< is 2
   Assert(n.getNumChildren() == 2);
 
   TNode arg1 = n[0];
   TNode arg2 = n[1];
-
+  
+  // enforce the arguments for gor.< to be from the same type
   if (check)
   {    
     TypeNode t1 = arg1.getType();

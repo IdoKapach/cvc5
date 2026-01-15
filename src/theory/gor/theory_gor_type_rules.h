@@ -9,9 +9,6 @@
 namespace cvc5::internal {
 namespace theory {
 namespace gor {
-
-/* -------------------------------------------------------------------------- */
-
 class GenericSmallerThanTypeRule
 {
  public:
@@ -21,9 +18,6 @@ class GenericSmallerThanTypeRule
                               bool check,
                               std::ostream* errOut);
 };
-
-/* -------------------------------------------------------------------------- */
-
 }  // namespace gor
 }  // namespace theory
 }  // namespace cvc5::internal

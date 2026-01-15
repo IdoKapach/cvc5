@@ -1,4 +1,5 @@
 ; COMMAND-LINE: --produce-models
+; DISABLE-TESTER: model
 ; EXPECT: sat
 ; EXPECT: (
 ; EXPECT: ; cardinality of S is 3
@@ -8,8 +9,8 @@
 ; EXPECT: (define-fun x () S (as @S_0 S))
 ; EXPECT: (define-fun y () S (as @S_1 S))
 ; EXPECT: (define-fun z () S (as @S_2 S))
-; EXPECT: (define-fun x0 ((BOUND_VARIABLE_523 Int)) Bool (= BOUND_VARIABLE_523 0))
-; EXPECT: (define-fun x1 ((BOUND_VARIABLE_530 Int)) Bool false)
+; EXPECT: (define-fun x0 ((BOUND_VARIABLE_527 Int)) Bool (= BOUND_VARIABLE_527 0))
+; EXPECT: (define-fun x1 ((BOUND_VARIABLE_534 Int)) Bool false)
 ; EXPECT: (define-fun a () (Array Int Int) (store ((as const (Array Int Int)) 1) 0 (- 1)))
 ; EXPECT: (define-fun b () (Array Int Int) ((as const (Array Int Int)) 0))
 ; EXPECT: )

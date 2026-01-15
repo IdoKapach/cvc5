@@ -38,16 +38,15 @@ class GorMat {
   /** Matrix that each exit i,j of it equals true iff there's a path from i to j of length of at most d_numVars */
   std::vector<std::vector<bool>> d_reachableMatrix; 
 
-  // vector that contains all the pairs that the gor relation was applied on
-  // Node d_gorPairs = Node::null();
+  /** vector that contains all the pairs that the gor relation was applied on */
   std::vector<Node> d_gorPairs;
 
   GorMat() {d_numExps = 0;}
 
-  // Check if the graph contain a cycle, and if yes, return also one cycle path
+  /** Check if the graph contain a cycle, and if yes, return also one cycle path */
   std::pair<bool, std::vector<TNode>> isHasCycle();
 
-  // Check if the graph contain forbidden path
+  /** Check if the graph contain forbidden path */
   std::optional<std::pair<TNode, TNode>> containForbiddenPath();
 
   void computeReachableMatrix();
@@ -89,21 +88,16 @@ class TheoryGenericOrderRelation : public Theory
                           const std::set<Node>& termSet) override;
   void computeCareGraph() override;
   TrustNode explain(TNode) override;
-  // Node getModelValue(TNode) override;
   std::string identify() const override { return "THEORY_GOR"; }
   void preRegisterTerm(TNode node) override;
   TrustNode ppRewrite(TNode n, std::vector<SkolemLemma>& lems) override;
-  // PPAssertStatus ppAssert(TrustNode tin,
-  //                         TrustSubstitutionMap& outSubstitutions) override;
   void presolve() override;
   bool isEntailed(Node n, bool pol);
-
 
   bool needsCheckLastEffort() override;
 
  private:
   std::vector<Node> d_relations;
-
 
   TheoryGenericOrderRelationRewriter d_rewriter;
 
@@ -116,12 +110,12 @@ class TheoryGenericOrderRelation : public Theory
   /** Manages notifications from our equality engine */
   TheoryEqNotifyClass d_eqNotify;
 
-  // Map from each typeNode to its GorMat
+  /** Map from each typeNode to its GorMat */
   std::map<TypeNode, GorMat> d_matMap;
 
   bool d_lastEffortCalled = false;
 
-  // enforce for each (i,j) with d_reachableMatrix[i][j] == true, exp_i != exp_j as a lemma during solving
+  /** enforce for each (i,j) with d_reachableMatrix[i][j] == true, exp_i != exp_j as a lemma during solving */
   void enforceDisequalities(GorMat& gorMat, TypeNode type);
 
   std::vector<TNode> computeForbiddenPath(GorMat& gorMat, std::pair<TNode, TNode>* pair);

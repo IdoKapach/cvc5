@@ -9,8 +9,8 @@ namespace cvc5::internal {
 namespace theory {
 namespace gor {
 
-// You might need this for proper type enumeration
-// For now, this can be a stub
+// might need this for proper type enumeration
+// for now, this can be a stub
 
 }  // namespace gor
 }  // namespace theory
