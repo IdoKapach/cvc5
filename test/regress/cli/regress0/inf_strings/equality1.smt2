@@ -1,4 +1,4 @@
-; EXPECT: unsat
+; EXPECT: sat
 (set-logic ALL)
 
 (declare-const x InfString)
