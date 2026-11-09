@@ -22,6 +22,7 @@
 
 #include "util/rational.h"
 #include "util/string.h"
+#include "base/check.h"
 
 namespace cvc5::internal {
 
@@ -33,7 +34,7 @@ class InfiniteStringStream {
   explicit InfiniteStringStream(const String& prefix, const String& suffix)
       : d_prefix(prefix), d_suffix(suffix), d_string(String())
   {
-    assert(!suffix.empty());
+    Assert(!suffix.empty());
   }
 
   
@@ -103,9 +104,9 @@ class InfiniteString
    */
   // InfiniteString() = default;
   explicit InfiniteString(const String& prefix,const String& suffix)
-      : d_prefix(prefix), d_suffix(suffix), d_stream(d_prefix, d_suffix)
+      : d_prefix(prefix), d_suffix(suffix)
   {
-    assert(!suffix.empty());
+    Assert(!suffix.empty());
   }
   // explicit InfiniteString(const std::string& prefix, bool useEscSequencesP = false,
   //    const std::string& suffix, bool useEscSequencesS = false)
@@ -114,9 +115,9 @@ class InfiniteString
   // }
   /** lambda constructor */
   explicit InfiniteString(const String& suffix)
-			: d_prefix(String()), d_suffix(suffix), d_stream(d_prefix, d_suffix)
+			: d_prefix(String()), d_suffix(suffix)
 	{
-    assert(!suffix.empty());
+    Assert(!suffix.empty());
 	}
   
   /** Return the prefix of this infinite string */
@@ -126,20 +127,20 @@ class InfiniteString
   /** Return the concat of new_prefix with this infinite string (new_prefix + this) */
   InfiniteString concat(const String& new_prefix) const;
 
-  bool operator==(InfiniteString& y) { return cmp(y) == 0; }
-  bool operator!=(InfiniteString& y) { return cmp(y) != 0; }
-  bool operator<(InfiniteString& y) { return cmp(y) < 0; }
-  bool operator>(InfiniteString& y) { return cmp(y) > 0; }
-  bool operator<=(InfiniteString& y) { return cmp(y) <= 0; }
-  bool operator>=(InfiniteString& y) { return cmp(y) >= 0; }
+  bool operator==(const InfiniteString& y) const { return cmp(y) == 0; }
+  bool operator!=(const InfiniteString& y) const { return cmp(y) != 0; }
+  bool operator<(const InfiniteString& y) const { return cmp(y) < 0; }
+  bool operator>(const InfiniteString& y) const { return cmp(y) > 0; }
+  bool operator<=(const InfiniteString& y) const { return cmp(y) <= 0; }
+  bool operator>=(const InfiniteString& y) const { return cmp(y) >= 0; }
 
   /**
    * Returns true if this infinite string is equal to y for their first n characters.
    * If n is larger than the length of y (under the string case), this method returns
    * false.
    */
-  bool strncmp(const String& y, std::size_t n);
-  bool strncmp(InfiniteString& y, std::size_t n);
+  bool strncmp(const String& y, std::size_t n) const;
+  bool strncmp(const InfiniteString& y, std::size_t n) const;
 
   bool isRepeated() const;
 
@@ -206,26 +207,40 @@ class InfiniteString
    */
   unsigned back() const;
 
+  /** Return the unsigned (code point) value at index i */
+  unsigned charAt(size_t i) const;
+  /** First n characters, built in a single O(n) pass. */
+  String getNChars(size_t n) const;
+
   /**
    * Returns the maximum length of infinite string representable by this class.
    * Corresponds to the maximum size of d_prefix and d_suffix (which are of equal size and equal to String::maxSize()).
    */
   static size_t maxSize() { return 2 * String::maxSize(); }
 
-  infinite_strings::InfiniteStringStream d_stream;
-
  private:
     /**
    * Returns a negative number if *this < y, 0 if *this and y are equal and a
    * positive number if *this > y.
    */
-  int cmp(InfiniteString& y);
+  int cmp(const InfiniteString& y) const;
+  int naiveCmp(const InfiniteString& y) const;
+
+  /** build the vector of suffixes of s*/
+  std::vector<std::pair<size_t, short>> buildSuffixesVec(String& s);
 
   /** find minimal n such that n % x = 0 and n % y = 0 */
   static size_t minSharedMul(size_t x, size_t y);
 
+  /** Rotate a string by a given index (the rotate_inx becomes the new beginning) */
+  static String rotate(const String& s, size_t rotate_inx) {
+    return s.suffix(s.size() - rotate_inx)
+                   .concat(s.prefix(rotate_inx));
+  }
+
   String d_prefix;
   String d_suffix;
+  std::vector<std::pair<size_t, short>> d_suffixesVec;
 }; /* class InfiniteString */
 
 } // namespace cvc5::internal
